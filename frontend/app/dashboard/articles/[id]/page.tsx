@@ -1,275 +1,114 @@
 "use client"
 
-import { useEffect, useState, useCallback } from "react"
-import { useRouter, useParams } from "next/navigation"
-import { Button } from "@/components/ui/button"
-import { Input } from "@/components/ui/input"
-import { Card } from "@/components/ui/card"
-import { Badge } from "@/components/ui/badge"
-import { useAuth } from "@/lib/context/AuthContext"
-import { PublishModal } from "@/components/PublishModal"
-import RichTextEditor from "@/components/editor/RichTextEditor"
-import ContentAnalysis from "@/components/ContentAnalysis"
-import { AIModelSelector } from "@/components/AIModelSelector"
+import { useEffect, useMemo, useRef, useState } from "react"
+import { useParams, useRouter } from "next/navigation"
 import {
-  Save,
   ArrowLeft,
-  Sparkles,
-  Loader2,
-  ChevronRight,
-  ChevronLeft,
-  Send,
-  List,
-  Wand2,
-  Image as ImageIcon,
-  Target,
-  Settings,
-  FileText,
-  X,
-  Undo2,
-  Redo2,
-  Type,
-  Bold,
-  Italic,
-  Underline,
-  Quote,
-  Link as LinkIcon,
-  List as ListIcon,
-  Video,
-  Maximize2,
-  MoreVertical,
-  Sun,
-  Moon,
-  Eye,
-  Trash2,
-  Globe,
-  Plus,
-  ArrowUpRight,
-  UploadCloud,
-  Clock,
-  CheckCircle2,
   Calendar,
-  Lock,
-  Tag,
-  FolderOpen,
-  ChevronDown,
+  CheckSquare,
+  Loader2,
+  Moon,
+  MoreVertical,
+  Search,
+  Square,
+  Sun,
+  UploadCloud,
 } from "lucide-react"
+import { useAuth } from "@/lib/context/AuthContext"
+import { useTheme } from "@/lib/context/ThemeContext"
 import { toast } from "sonner"
-import { marked } from "marked"
 
-interface Article {
+type Article = {
   id: string
   title: string
   content: string
   excerpt: string | null
   status: string
-  toneOfVoice: string | null
-  contentFramework: string | null
-  metaTitle: string | null
-  metaDescription: string | null
-  focusKeyword: string | null
-  wordCount: number
-  readingTime: number
-  userId?: string
-  collaborators?: Array<{
-    id: string
-    userId: string
-    role: string
-    status: string
-  }>
-}
-
-// Helper function to detect if content is markdown
-const isMarkdown = (content: string): boolean => {
-  const markdownPatterns = [
-    /^#{1,6}\s/m,           // Headers
-    /\*\*.*\*\*/,           // Bold
-    /\*.*\*/,               // Italic
-    /^\s*[-*+]\s/m,         // Unordered lists
-    /^\s*\d+\.\s/m,         // Ordered lists
-    /\[.*\]\(.*\)/,         // Links
-    /```[\s\S]*```/,        // Code blocks
-    /^\>/m,                 // Blockquotes
-  ]
-  return markdownPatterns.some(pattern => pattern.test(content))
-}
-
-// Helper function to convert markdown to HTML
-const convertMarkdownToHtml = async (markdown: string): Promise<string> => {
-  try {
-    const html = await marked.parse(markdown)
-    return html
-  } catch (error) {
-    console.error('Error converting markdown to HTML:', error)
-    return markdown
-  }
-}
-
-// Helper function to check if user can edit
-const canEdit = (role: string | null): boolean => {
-  return role === 'OWNER' || role === 'EDITOR'
-}
-
-// Helper function to check if user can view
-const canView = (role: string | null): boolean => {
-  return role === 'OWNER' || role === 'EDITOR' || role === 'COMMENTER' || role === 'VIEWER'
+  slug: string
+  scheduleAt?: string | null
+  featuredImage?: string | null
+  metaDescription?: string | null
+  focusKeyword?: string | null
 }
 
 export default function ArticleEditorPage() {
   const { user, loading: authLoading } = useAuth()
-  const router = useRouter()
+  const { isDark, toggleTheme } = useTheme()
   const params = useParams()
+  const router = useRouter()
   const articleId = params.id as string
 
-  const [article, setArticle] = useState<Article | null>(null)
   const [loading, setLoading] = useState(true)
   const [saving, setSaving] = useState(false)
-  const [title, setTitle] = useState("")
-  const [excerpt, setExcerpt] = useState("")
-  const [content, setContent] = useState("")
-  const [showAISidebar, setShowAISidebar] = useState(true)
-  const [userRole, setUserRole] = useState<string | null>(null) // OWNER, EDITOR, COMMENTER, VIEWER
-  const [isOwner, setIsOwner] = useState(false)
-  const [aiLoading, setAiLoading] = useState(false)
-  const [generateContentLoading, setGenerateContentLoading] = useState(false)
-  const [generateOutlineLoading, setGenerateOutlineLoading] = useState(false)
-  const [generateMetaLoading, setGenerateMetaLoading] = useState(false)
-  const [showPublishModal, setShowPublishModal] = useState(false)
-  const [lastSaved, setLastSaved] = useState<Date | null>(null)
-  const [hasUnsavedChanges, setHasUnsavedChanges] = useState(false)
-  const [activeAITab, setActiveAITab] = useState<'content' | 'images' | 'seo'>('content')
+  const [deleting, setDeleting] = useState(false)
 
-  // SEO fields
-  const [metaTitle, setMetaTitle] = useState("")
+  const [title, setTitle] = useState("")
+  const [content, setContent] = useState("")
+  const [status, setStatus] = useState("DRAFT")
+  const [publishDate, setPublishDate] = useState("")
+  const [slug, setSlug] = useState("")
   const [metaDescription, setMetaDescription] = useState("")
   const [focusKeyword, setFocusKeyword] = useState("")
+  const [featuredImage, setFeaturedImage] = useState("")
+  const [uploadingImage, setUploadingImage] = useState(false)
+  const featuredImageInputRef = useRef<HTMLInputElement>(null)
 
-  // AI fields
-  const [toneOfVoice, setToneOfVoice] = useState("professional")
-  const [contentFramework, setContentFramework] = useState("standard")
-  const [selectedAIModel, setSelectedAIModel] = useState("")
+  const [channelWedding, setChannelWedding] = useState(true)
+  const [channelLinkedIn, setChannelLinkedIn] = useState(false)
+  const [channelInstagram, setChannelInstagram] = useState(false)
 
-  // Image generation fields
-  const [imagePrompt, setImagePrompt] = useState("")
-  const [imageGenerating, setImageGenerating] = useState(false)
-  const [generatedImages, setGeneratedImages] = useState<any[]>([])
-  const [selectedImageModel, setSelectedImageModel] = useState("")
-
-  // SEO fields - separate model selection
-  const [selectedSEOModel, setSelectedSEOModel] = useState("")
-  const [seoAnalyzing, setSeoAnalyzing] = useState(false)
-  const [seoAnalysis, setSeoAnalysis] = useState<any>(null)
-  const [featuredImage, setFeaturedImage] = useState<string | null>(null)
-  const [seoScore, setSeoScore] = useState(85)
-  const [focusKeywords, setFocusKeywords] = useState<string[]>(["Minimalist", "Wedding"])
-  const [readingTime, setReadingTime] = useState(1)
-
-  // Publication fields
-  const [articleStatus, setArticleStatus] = useState("Draft")
-  const [publishDate, setPublishDate] = useState("")
-  const [urlSlug, setUrlSlug] = useState("")
+  const [settingWedding, setSettingWedding] = useState(true)
+  const [settingLinkedIn, setSettingLinkedIn] = useState(true)
+  const [settingInstagramA, setSettingInstagramA] = useState(false)
+  const [settingInstagramB, setSettingInstagramB] = useState(false)
 
   useEffect(() => {
     if (!authLoading && !user) {
-      router.push("/login")
+      router.replace("/login")
     }
-  }, [user, authLoading, router])
+  }, [authLoading, user, router])
 
   useEffect(() => {
-    if (user && articleId !== "new") {
+    if (user && articleId) {
+      if (articleId === "new") {
+        router.replace("/dashboard/articles/new")
+        return
+      }
       fetchArticle()
-    } else if (articleId === "new") {
-      setLoading(false)
     }
   }, [user, articleId])
 
-  // Auto-save every 2 minutes if there are unsaved changes
-  useEffect(() => {
-    if (hasUnsavedChanges && articleId !== "new") {
-      const autoSaveInterval = setInterval(() => {
-        handleSave()
-      }, 120000) // 2 minutes
-
-      return () => clearInterval(autoSaveInterval)
-    }
-  }, [hasUnsavedChanges, articleId])
-
-  // Track unsaved changes
-  useEffect(() => {
-    if (article) {
-      setHasUnsavedChanges(true)
-    }
-  }, [title, content, excerpt])
-
-  const fetchArticle = async () => {
+  async function fetchArticle() {
     try {
       setLoading(true)
       const token = localStorage.getItem("accessToken")
-
       const response = await fetch(`/api/articles/${articleId}`, {
-        headers: {
-          Authorization: `Bearer ${token}`,
-        },
+        headers: { Authorization: `Bearer ${token}` },
       })
-
       const data = await response.json()
 
-      if (data.success) {
-        const articleData = data.data.article
-        setArticle(articleData)
-        setTitle(articleData.title)
-        setContent(articleData.content || "")
-        setExcerpt(articleData.excerpt || "")
-        setMetaTitle(articleData.metaTitle || "")
-        setMetaDescription(articleData.metaDescription || "")
-        setFocusKeyword(articleData.focusKeyword || "")
-        setToneOfVoice(articleData.toneOfVoice || "professional")
-        setContentFramework(articleData.contentFramework || "standard")
-        setArticleStatus(articleData.status || "DRAFT")
-        setPublishDate(articleData.scheduleAt ? new Date(articleData.scheduleAt).toISOString().split('T')[0] : "")
-        setUrlSlug(articleData.slug || "")
-        setFeaturedImage(articleData.featuredImage || null)
-        setHasUnsavedChanges(false)
-
-        // Check if user is owner or collaborator
-        const isArticleOwner = articleData.userId === user?.id
-        setIsOwner(isArticleOwner)
-
-        if (isArticleOwner) {
-          setUserRole('OWNER')
-        } else if (articleData.collaborators && articleData.collaborators.length > 0) {
-          const userCollaborator = articleData.collaborators.find(
-            (c: any) => c.userId === user?.id && c.status === 'ACCEPTED'
-          )
-          if (userCollaborator) {
-            setUserRole(userCollaborator.role)
-          }
-        }
-      } else {
-        toast.error(data.error || "Failed to fetch article")
-        router.push("/dashboard/articles")
+      if (!response.ok || !data.success) {
+        throw new Error(data.error || "Failed to load article")
       }
-    } catch (error) {
-      console.error("Error fetching article:", error)
-      toast.error("Failed to load article")
-      router.push("/dashboard/articles")
+
+      const article: Article = data.data.article
+      setTitle(article.title || "")
+      setContent(article.content || "")
+      setStatus(article.status || "DRAFT")
+      setSlug(article.slug || "")
+      setPublishDate(article.scheduleAt ? new Date(article.scheduleAt).toISOString().slice(0, 10) : "")
+      setFeaturedImage(article.featuredImage || "")
+      setMetaDescription(article.metaDescription || "")
+      setFocusKeyword(article.focusKeyword || "")
+    } catch (error: any) {
+      toast.error(error.message || "Failed to load article")
+      router.replace("/dashboard/articles")
     } finally {
       setLoading(false)
     }
   }
 
-  const handleSave = useCallback(async (status?: string) => {
-    // Check edit permission
-    if (!canEdit(userRole)) {
-      toast.error("You don't have permission to edit this article")
-      return
-    }
-
-    if (!title.trim()) {
-      toast.error("Please enter a title")
-      return
-    }
-
+  async function saveArticle(nextStatus?: string) {
     try {
       setSaving(true)
       const token = localStorage.getItem("accessToken")
@@ -277,1174 +116,330 @@ export default function ArticleEditorPage() {
       const payload = {
         title,
         content,
-        excerpt,
-        metaTitle,
-        metaDescription,
-        focusKeyword,
-        toneOfVoice,
-        contentFramework,
-        slug: urlSlug,
-        scheduleAt: publishDate || null,
-        featuredImage,
-        ...(status && { status }),
+        status: nextStatus || status,
+        slug,
+        scheduleAt: publishDate ? new Date(publishDate).toISOString() : null,
+        featuredImage: featuredImage || null,
+        metaDescription: metaDescription || null,
+        focusKeyword: focusKeyword || null,
       }
 
-      let response
-      if (articleId === "new") {
-        response = await fetch("/api/articles", {
-          method: "POST",
-          headers: {
-            "Content-Type": "application/json",
-            Authorization: `Bearer ${token}`,
-          },
-          body: JSON.stringify(payload),
-        })
-      } else {
-        response = await fetch(`/api/articles/${articleId}`, {
-          method: "PUT",
-          headers: {
-            "Content-Type": "application/json",
-            Authorization: `Bearer ${token}`,
-          },
-          body: JSON.stringify(payload),
-        })
-      }
-
+      const response = await fetch(`/api/articles/${articleId}`, {
+        method: "PUT",
+        headers: {
+          "Content-Type": "application/json",
+          Authorization: `Bearer ${token}`,
+        },
+        body: JSON.stringify(payload),
+      })
       const data = await response.json()
 
-      if (data.success) {
-        toast.success(
-          status === "PUBLISHED"
-            ? "Article published successfully"
-            : "Article saved successfully"
-        )
-
-        if (articleId === "new") {
-          router.push(`/dashboard/articles/${data.data.article.id}`)
-        } else {
-          setArticle(data.data.article)
-        }
-        setLastSaved(new Date())
-        setHasUnsavedChanges(false)
-      } else {
-        toast.error(data.error || "Failed to save article")
+      if (!response.ok || !data.success) {
+        throw new Error(data.error || "Failed to save article")
       }
-    } catch (error) {
-      console.error("Error saving article:", error)
-      toast.error("Failed to save article")
+
+      if (nextStatus) setStatus(nextStatus)
+      toast.success(nextStatus === "PUBLISHED" ? "Article published" : "Draft saved")
+    } catch (error: any) {
+      toast.error(error.message || "Failed to save article")
     } finally {
       setSaving(false)
     }
-  }, [title, content, excerpt, metaTitle, metaDescription, focusKeyword, toneOfVoice, contentFramework, articleId, router])
-
-  const handlePublishClick = async () => {
-    // First save the article if it's new or has changes
-    if (!title.trim()) {
-      toast.error("Please enter a title before publishing")
-      return
-    }
-
-    // Auto-save before opening publish modal
-    await handleSave()
-
-    // Only open modal if we have a valid article ID
-    if (articleId !== "new") {
-      setShowPublishModal(true)
-    }
   }
 
-  const handleGenerateContent = async () => {
-    if (!title.trim()) {
-      toast.error("Please enter a title first")
-      return
-    }
-
+  async function handleFeaturedImageUpload(file: File) {
     try {
-      setGenerateContentLoading(true)
+      setUploadingImage(true)
       const token = localStorage.getItem("accessToken")
+      const uploadForm = new FormData()
+      uploadForm.append("file", file)
+      uploadForm.append("articleId", articleId)
+      uploadForm.append("alt", title || "Featured image")
+      uploadForm.append("optimize", "true")
 
-      const response = await fetch("/api/ai/generate", {
+      const response = await fetch("/api/images/upload", {
         method: "POST",
         headers: {
-          "Content-Type": "application/json",
           Authorization: `Bearer ${token}`,
         },
-        body: JSON.stringify({
-          type: "blog-content",
-          title,
-          keywords: focusKeyword ? [focusKeyword] : [],
-          toneOfVoice,
-          contentFramework,
-          wordCount: 1000,
-          model: selectedAIModel || undefined, // Include selected AI model
-        }),
+        body: uploadForm,
       })
 
       const data = await response.json()
-
-      if (data.success) {
-        let processedContent = data.data.result
-
-        // Convert markdown to HTML if needed
-        if (isMarkdown(processedContent)) {
-          processedContent = await convertMarkdownToHtml(processedContent)
-        }
-
-        setContent(processedContent)
-        toast.success("Content generated successfully")
-      } else {
-        toast.error(data.error || "Failed to generate content")
+      if (!response.ok || !data.success) {
+        throw new Error(data.error || "Failed to upload image")
       }
-    } catch (error) {
-      console.error("Error generating content:", error)
-      toast.error("Failed to generate content")
+
+      setFeaturedImage(data.url || data.data?.url || "")
+      toast.success("Featured image uploaded")
+    } catch (error: any) {
+      toast.error(error.message || "Failed to upload image")
     } finally {
-      setGenerateContentLoading(false)
+      setUploadingImage(false)
     }
   }
 
-  const handleGenerateOutline = async () => {
-    if (!title.trim()) {
-      toast.error("Please enter a title first")
-      return
-    }
+  async function deleteArticle() {
+    if (!confirm("Are you sure you want to delete this article?")) return
 
     try {
-      setGenerateOutlineLoading(true)
-      const token = localStorage.getItem("accessToken")
-
-      const response = await fetch("/api/ai/generate", {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-          Authorization: `Bearer ${token}`,
-        },
-        body: JSON.stringify({
-          type: "outline",
-          topic: title,
-          sections: 5,
-          model: selectedAIModel || undefined, // Include selected AI model
-        }),
-      })
-
-      const data = await response.json()
-
-      if (data.success) {
-        let outline = data.data.result
-
-        // If result is an array, join it
-        if (Array.isArray(outline)) {
-          outline = outline.join("\n\n")
-        }
-
-        // Convert markdown to HTML if needed
-        let processedOutline = outline
-        if (isMarkdown(outline)) {
-          processedOutline = await convertMarkdownToHtml(outline)
-        }
-
-        setContent(processedOutline)
-        toast.success("Outline generated successfully")
-      } else {
-        toast.error(data.error || "Failed to generate outline")
-      }
-    } catch (error) {
-      console.error("Error generating outline:", error)
-      toast.error("Failed to generate outline")
-    } finally {
-      setGenerateOutlineLoading(false)
-    }
-  }
-
-  const handleGenerateMetaDescription = async () => {
-    // Strip HTML tags to get plain text
-    const plainText = content.replace(/<[^>]*>/g, '').trim()
-    if (!plainText) {
-      toast.error("Please write some content first")
-      return
-    }
-
-    try {
-      setGenerateMetaLoading(true)
-      const token = localStorage.getItem("accessToken")
-
-      const response = await fetch("/api/ai/generate", {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-          Authorization: `Bearer ${token}`,
-        },
-        body: JSON.stringify({
-          type: "meta-description",
-          content: plainText,
-          maxLength: 160,
-          model: selectedSEOModel || selectedAIModel || undefined, // Use SEO model first, then fallback
-        }),
-      })
-
-      const data = await response.json()
-
-      if (data.success) {
-        setMetaDescription(data.data.result)
-        toast.success("Meta description generated")
-      } else {
-        toast.error(data.error || "Failed to generate meta description")
-      }
-    } catch (error) {
-      console.error("Error generating meta description:", error)
-      toast.error("Failed to generate meta description")
-    } finally {
-      setGenerateMetaLoading(false)
-    }
-  }
-
-  const handleGenerateImage = async () => {
-    if (!imagePrompt.trim()) {
-      toast.error("Please enter an image description")
-      return
-    }
-
-    try {
-      setImageGenerating(true)
-      const token = localStorage.getItem("accessToken")
-
-      const response = await fetch("/api/ai/generate", {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-          Authorization: `Bearer ${token}`,
-        },
-        body: JSON.stringify({
-          type: "image",
-          prompt: imagePrompt,
-          model: selectedImageModel || "gemini-1.5-flash", // Use selected model or default to free
-        }),
-      })
-
-      const data = await response.json()
-
-      if (data.success) {
-        // Add generated image to the list - handle both data.result and direct data
-        const imageData = data.data.result || data.data
-        setGeneratedImages(prev => [imageData, ...prev])
-        toast.success("Image generated successfully")
-        setImagePrompt("")
-      } else {
-        toast.error(data.error || "Failed to generate image")
-      }
-    } catch (error) {
-      console.error("Error generating image:", error)
-      toast.error("Failed to generate image")
-    } finally {
-      setImageGenerating(false)
-    }
-  }
-
-  const handleAnalyzeSEO = async () => {
-    const plainText = content.replace(/<[^>]*>/g, '').trim()
-    if (!plainText) {
-      toast.error("Please write some content first")
-      return
-    }
-
-    try {
-      setSeoAnalyzing(true)
-      const token = localStorage.getItem("accessToken")
-
-      const response = await fetch("/api/ai/generate", {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-          Authorization: `Bearer ${token}`,
-        },
-        body: JSON.stringify({
-          type: "seo-analysis",
-          content: plainText,
-          title: title,
-          model: selectedSEOModel || "gemini-1.5-flash",
-        }),
-      })
-
-      const data = await response.json()
-
-      if (data.success) {
-        setSeoAnalysis(data.data.result)
-        toast.success("SEO analysis complete")
-      } else {
-        toast.error(data.error || "Failed to analyze SEO")
-      }
-    } catch (error) {
-      console.error("Error analyzing SEO:", error)
-      toast.error("Failed to analyze SEO")
-    } finally {
-      setSeoAnalyzing(false)
-    }
-  }
-
-  const getWordCount = () => {
-    // Strip HTML tags and count words
-    const plainText = content.replace(/<[^>]*>/g, '').trim()
-    return plainText.split(/\s+/).filter(Boolean).length
-  }
-
-  const handleAddKeyword = (keyword: string) => {
-    if (keyword.trim() && !focusKeywords.includes(keyword.trim())) {
-      setFocusKeywords([...focusKeywords, keyword.trim()])
-    }
-  }
-
-  const handleRemoveKeyword = (keyword: string) => {
-    setFocusKeywords(focusKeywords.filter(kw => kw !== keyword))
-  }
-
-  const handleDeleteArticle = async () => {
-    if (!confirm('Are you sure you want to delete this article? This action cannot be undone.')) {
-      return
-    }
-
-    try {
+      setDeleting(true)
       const token = localStorage.getItem("accessToken")
       const response = await fetch(`/api/articles/${articleId}`, {
         method: "DELETE",
-        headers: {
-          Authorization: `Bearer ${token}`,
-        },
+        headers: { Authorization: `Bearer ${token}` },
       })
-
       const data = await response.json()
 
-      if (data.success) {
-        toast.success("Article deleted successfully")
-        router.push("/dashboard/articles")
-      } else {
-        toast.error(data.error || "Failed to delete article")
+      if (!response.ok || !data.success) {
+        throw new Error(data.error || "Failed to delete article")
       }
-    } catch (error) {
-      console.error("Error deleting article:", error)
-      toast.error("Failed to delete article")
+
+      toast.success("Article deleted")
+      router.replace("/dashboard/articles")
+    } catch (error: any) {
+      toast.error(error.message || "Failed to delete article")
+    } finally {
+      setDeleting(false)
     }
   }
 
+  const words = useMemo(() => {
+    if (!content.trim()) return 0
+    return content.trim().split(/\s+/).length
+  }, [content])
+
+  const readingTime = useMemo(() => {
+    return Math.max(1, Math.ceil(words / 200))
+  }, [words])
+
   if (authLoading || loading) {
     return (
-      <div className="flex items-center justify-center min-h-screen">
-        <div className="text-center">
-          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-primary mx-auto mb-4"></div>
-          <p className="text-muted-foreground">Loading editor...</p>
-        </div>
+      <div className="flex min-h-[60vh] items-center justify-center">
+        <Loader2 className="h-10 w-10 animate-spin text-[#FB6503]" />
       </div>
     )
   }
 
   return (
-    <div style={{
-      minHeight: '100vh',
-      backgroundColor: '#f8f9fa',
-      backgroundImage: 'linear-gradient(rgba(255, 255, 255, 0.9), rgba(255, 255, 255, 0.9)), url("/design/BG%2023-01%202.png")',
-      backgroundSize: 'cover',
-      backgroundAttachment: 'fixed',
-      backgroundPosition: 'center',
-      fontFamily: 'Inter, sans-serif',
-      color: '#1a1a1a'
-    }}>
-      <style jsx global>{`
-        /* Tablet and below */
-        @media (max-width: 1024px) {
-          .main-content-grid {
-            grid-template-columns: 1fr !important;
-            height: auto !important;
-            overflow-y: auto !important;
-            min-height: 100vh !important;
-          }
-          .sidebar-aside {
-            border-left: none !important;
-            border-top: 1px solid rgba(0,0,0,0.05) !important;
-            height: auto !important;
-            min-height: auto !important;
-            max-height: none !important;
-            overflow-y: visible !important;
-            position: relative !important;
-          }
-          .editor-area-wrapper {
-            padding: 24px 20px !important;
-            height: auto !important;
-            min-height: auto !important;
-          }
-          .header-nav {
-            padding: 0 16px !important;
-          }
-          .header-center-logo {
-            display: none !important;
-          }
-          .ai-panel-floating {
-            right: 0 !important;
-            top: 0 !important;
-            width: 100% !important;
-            height: 100% !important;
-            border-radius: 0 !important;
-            z-index: 1000 !important;
-          }
-        }
-
-        /* Mobile landscape and below */
-        @media (max-width: 768px) {
-          .header-nav {
-            height: 60px !important;
-            padding: 0 12px !important;
-          }
-          .main-content-grid {
-            padding-top: 60px !important;
-          }
-          .editor-area-wrapper {
-            padding: 16px 12px !important;
-            min-height: 50vh !important;
-          }
-          .sidebar-aside {
-            padding: 20px 16px !important;
-            padding-bottom: 40px !important;
-          }
-          .featured-image-zone {
-            max-height: 250px !important;
-            margin-bottom: 24px !important;
-          }
-          .article-title-input {
-            font-size: clamp(24px, 5vw, 42px) !important;
-            padding: 16px 0 !important;
-          }
-          .config-section {
-            gap: 12px !important;
-            padding: 20px !important;
-          }
-          .ai-tab-button {
-            font-size: 11px !important;
-            padding: 8px 12px !important;
-          }
-        }
-
-        /* Mobile portrait */
-        @media (max-width: 480px) {
-          .header-nav {
-            height: 56px !important;
-            padding: 0 8px !important;
-          }
-          .main-content-grid {
-            padding-top: 56px !important;
-          }
-          .header-nav h1 {
-            font-size: 12px !important;
-            max-width: 120px !important;
-          }
-          .header-nav button {
-            font-size: 11px !important;
-            padding: 0 12px !important;
-            height: 32px !important;
-          }
-          .editor-area-wrapper {
-            padding: 12px 8px !important;
-            min-height: 40vh !important;
-          }
-          .article-title-input {
-            font-size: clamp(20px, 6vw, 32px) !important;
-            padding: 12px 0 !important;
-          }
-          .featured-image-zone {
-            max-height: 200px !important;
-            margin-bottom: 20px !important;
-            border-radius: 16px !important;
-          }
-          .sidebar-aside {
-            padding: 16px 12px !important;
-            padding-bottom: 60px !important;
-            gap: 16px !important;
-          }
-          .config-section {
-            padding: 16px !important;
-            border-radius: 16px !important;
-          }
-          .config-input {
-            font-size: 12px !important;
-          }
-          .ai-panel-floating {
-            padding: 16px !important;
-          }
-          .ai-tab-button {
-            font-size: 10px !important;
-            padding: 6px 10px !important;
-          }
-        }
-
-        /* Hide scrollbars but keep functionality */
-        .editor-area-wrapper::-webkit-scrollbar,
-        .sidebar-aside::-webkit-scrollbar {
-          display: none;
-        }
-      `}</style>
-
-      {/* Top Navigation Bar */}
-      <header className="header-nav" style={{
-        position: 'fixed',
-        top: 0,
-        left: 0,
-        right: 0,
-        height: '72px',
-        backgroundColor: 'rgba(255, 255, 255, 0.85)',
-        backdropFilter: 'blur(10px)',
-        borderBottom: '1px solid rgba(0,0,0,0.05)',
-        display: 'flex',
-        alignItems: 'center',
-        justifyContent: 'space-between',
-        padding: '0 24px',
-        zIndex: 100
-      }}>
-        <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
-          <button
-            onClick={() => router.push("/dashboard/articles")}
-            style={{
-              width: '36px',
-              height: '36px',
-              borderRadius: '50%',
-              backgroundColor: '#fff',
-              border: '1px solid #eee',
-              display: 'flex',
-              alignItems: 'center',
-              justifyContent: 'center',
-              cursor: 'pointer'
-            }}
-          >
-            <ArrowLeft size={16} color="#1a1a1a" />
-          </button>
-          <div className="hidden sm:block">
-            <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-              <h1 style={{ fontSize: '14px', fontWeight: 800, color: '#1a1a1a', margin: 0, whiteSpace: 'nowrap', maxWidth: '200px', overflow: 'hidden', textOverflow: 'ellipsis' }}>
-                {title || "Untitled Article"}
-              </h1>
-              <Badge variant="outline" style={{ fontSize: '9px', height: '16px', padding: '0 4px', backgroundColor: '#fff', color: '#FF7A33', borderColor: '#FF7A33', fontWeight: 800 }}>
-                {article?.status || "DRAFT"}
-              </Badge>
+    <div
+      className="min-h-full bg-[#FFFEFD] text-[#212121] dark:bg-[#161616] dark:text-[#F2F2F2]"
+      style={{
+        fontFamily: "Satoshi, var(--font-geist-sans), sans-serif",
+        backgroundImage:
+          isDark
+            ? "linear-gradient(rgba(10,10,10,0.8), rgba(10,10,10,0.8)), url('/design/BG%2023-01%202.png')"
+            : "linear-gradient(rgba(255,255,255,0.76), rgba(255,255,255,0.76)), url('/design/BG%2023-01%202.png')",
+        backgroundPosition: "center",
+        backgroundSize: "cover",
+      }}
+    >
+      <header className="border-b border-[#E9E9E9] bg-[#FFFEFD] px-4 py-3 dark:border-[#2A2A2A] dark:bg-[#161616] md:px-6">
+        <div className="mx-auto flex w-full max-w-[1360px] flex-wrap items-center justify-between gap-3 lg:flex-nowrap lg:gap-4">
+          <button onClick={() => router.push("/dashboard/articles")} className="flex min-w-0 items-center gap-2 text-sm text-[#212121] dark:text-[#F7F7F7]">
+            <ArrowLeft className="h-4 w-4" />
+            <div className="min-w-0 text-left">
+              <p className="truncate text-sm font-medium text-black dark:text-white sm:text-base">{title || "Wedding Trends 2026"}</p>
+              <p className="text-[10px] font-bold text-[#6A6A6A]">DRAFT • Last saved 2 mins ago</p>
             </div>
+          </button>
+
+          <p className="order-3 w-full text-center text-[28px] font-black uppercase tracking-[-0.04em] text-[#FB6503] sm:text-[34px] lg:order-none lg:w-auto">LOGOIPSUM</p>
+
+          <div className="flex items-center gap-2">
+            <button type="button" onClick={toggleTheme} className="rounded-full p-1 text-[#212121] dark:text-[#F7F7F7]" aria-label="Toggle dark mode">
+              {isDark ? <Sun className="h-5 w-5" /> : <Moon className="h-5 w-5" />}
+            </button>
+            <span className="hidden text-sm text-[#212121] dark:text-[#F7F7F7] sm:inline">Auto saving..</span>
+            <button className="rounded-full border border-[#FB6503] bg-[#FFF0E6] px-5 py-1.5 text-sm font-bold text-[#212121]">Preview</button>
+            <button onClick={() => saveArticle("PUBLISHED")} className="rounded-full border border-[#E9E9E9] bg-[#FB6503] px-5 py-1.5 text-sm font-bold text-[#FFF0E6]">
+              Publish
+            </button>
           </div>
-        </div>
-
-        <div className="header-center-logo" style={{ position: 'absolute', left: '50%', transform: 'translateX(-50%)', display: 'flex', alignItems: 'center', gap: '8px' }}>
-          <div style={{ width: '24px', height: '24px', backgroundColor: '#FF7A33', borderRadius: '6px', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-            <Sparkles size={14} color="white" />
-          </div>
-          <span style={{ fontWeight: 900, fontSize: '18px', letterSpacing: '-0.5px', color: '#1a1a1a' }}>PUBLISHTYPE</span>
-        </div>
-
-        <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-          <div className="hidden md:flex" style={{ alignItems: 'center', gap: '6px', color: '#666', fontSize: '11px', fontWeight: 600, marginRight: '8px' }}>
-            {saving ? <Loader2 size={12} className="animate-spin" /> : <CheckCircle2 size={12} color="#10b981" />}
-            <span>{saving ? 'Saving...' : 'Saved'}</span>
-          </div>
-
-          <Button
-            onClick={handlePublishClick}
-            disabled={saving || articleId === "new"}
-            style={{
-              backgroundColor: '#FF7A33',
-              color: 'white',
-              border: 'none',
-              borderRadius: '10px',
-              padding: '0 16px',
-              height: '36px',
-              fontWeight: 800,
-              fontSize: '13px',
-              cursor: 'pointer',
-              boxShadow: '0 4px 10px rgba(255, 122, 51, 0.2)'
-            }}
-          >
-            Publish
-          </Button>
-
-          <Button
-            variant="ghost"
-            size="icon"
-            onClick={() => setShowAISidebar(!showAISidebar)}
-            style={{
-              borderRadius: '10px',
-              width: '36px',
-              height: '36px',
-              backgroundColor: showAISidebar ? '#f0f0f0' : 'transparent',
-              color: showAISidebar ? '#FF7A33' : '#666'
-            }}
-          >
-            <Sparkles size={18} />
-          </Button>
         </div>
       </header>
 
-      {/* Main Container */}
-      <div className="main-content-grid" style={{
-        display: 'grid',
-        gridTemplateColumns: '1fr 380px',
-        paddingTop: '72px',
-        maxWidth: '1600px',
-        margin: '0 auto',
-        height: '100vh',
-        overflow: 'hidden'
-      }}>
-
-        {/* Left Side: Editor Area */}
-        <div className="editor-area-wrapper" style={{
-          padding: '32px 48px',
-          overflowY: 'auto',
-          backgroundColor: 'transparent',
-          scrollbarWidth: 'none'
-        }}>
-
-          <div style={{ maxWidth: '900px', margin: '0 auto' }}>
-            {/* Featured Image Zone */}
-            <div
-              className="featured-image-zone"
-              onClick={() => { }}
-              style={{
-                width: '100%',
-                height: 'auto',
-                aspectRatio: '16/9',
-                maxHeight: '400px',
-                backgroundColor: '#fff',
-                borderRadius: '24px',
-                border: '2px dashed #eee',
-                display: 'flex',
-                alignItems: 'center',
-                justifyContent: 'center',
-                marginBottom: '40px',
-                cursor: 'pointer',
-                overflow: 'hidden',
-                position: 'relative',
-                transition: 'all 0.2s ease',
-                backgroundImage: featuredImage ? `url(${featuredImage})` : 'url("/design/laptop_mockup_bg.png")',
-                backgroundSize: 'cover',
-                backgroundPosition: 'center'
-              }}
-            >
-              {!featuredImage && (
-                <div style={{
-                  position: 'absolute',
-                  inset: 0,
-                  backgroundColor: 'rgba(255,255,255,0.7)',
-                  backdropFilter: 'blur(2px)',
-                  display: 'flex',
-                  flexDirection: 'column',
-                  alignItems: 'center',
-                  justifyContent: 'center',
-                  padding: '20px',
-                  textAlign: 'center'
-                }}>
-                  <div style={{
-                    width: '56px',
-                    height: '56px',
-                    borderRadius: '16px',
-                    backgroundColor: '#fff',
-                    display: 'flex',
-                    alignItems: 'center',
-                    justifyContent: 'center',
-                    boxShadow: '0 8px 30px rgba(0,0,0,0.04)',
-                    marginBottom: '12px'
-                  }}>
-                    <UploadCloud size={24} color="#FF7A33" />
-                  </div>
-                  <h3 style={{ fontSize: '16px', fontWeight: 800, color: '#1a1a1a', marginBottom: '4px' }}>Upload Featured Image:</h3>
-                  <p className="hidden sm:block" style={{ color: '#666', fontSize: '13px', fontWeight: 600 }}>Drag & drop or click to browse</p>
-                </div>
-              )}
-            </div>
-
-            {/* Title Input */}
-            <textarea
-              className="article-title-input"
-              placeholder="Post Title..."
-              value={title}
-              onChange={(e) => setTitle(e.target.value)}
-              rows={1}
-              style={{
-                width: '100%',
-                backgroundColor: 'transparent',
-                border: 'none',
-                fontSize: 'clamp(32px, 5vw, 48px)',
-                fontWeight: 900,
-                color: '#1a1a1a',
-                outline: 'none',
-                marginBottom: '24px',
-                letterSpacing: '-1.5px',
-                lineHeight: '1.2',
-                resize: 'none',
-                overflow: 'hidden',
-                padding: '20px 0'
-              }}
-              onInput={(e: any) => {
-                e.target.style.height = 'auto';
-                e.target.style.height = e.target.scrollHeight + 'px';
-              }}
-            />
-
-            {/* Content Editor */}
-            <div style={{ minHeight: '400px', fontSize: '18px', lineHeight: '1.8', color: '#1a1a1a' }}>
-              {!canEdit(userRole) && userRole && (
-                <div className="mb-4 p-3 bg-yellow-50 border border-yellow-200 rounded-lg">
-                  <p className="text-xs md:text-sm text-yellow-800 font-medium">
-                    🔒 Read-only mode ({userRole}).
-                  </p>
-                </div>
-              )}
-              <RichTextEditor
-                content={content}
-                onChange={setContent}
-                placeholder="Start typing your story..."
-                editable={canEdit(userRole)}
-                onSave={() => handleSave()}
-              />
-            </div>
-
-            {/* Editor Footer Stats */}
-            <div style={{
-              marginTop: '60px',
-              paddingTop: '20px',
-              borderTop: '1px solid rgba(0,0,0,0.05)',
-              display: 'flex',
-              justifyContent: 'space-between',
-              alignItems: 'center',
-              color: '#999',
-              fontSize: '12px',
-              fontWeight: 600,
-              paddingBottom: '40px'
-            }}>
-              <span>{getWordCount()} words</span>
-              <span>{readingTime} min read</span>
-            </div>
+      <div className="border-b border-[#E9E9E9] bg-[#FFF0E6] px-4 py-3 dark:border-[#2A2A2A] dark:bg-[#2A211D] md:px-6">
+        <div className="mx-auto flex w-full max-w-[1360px] items-center justify-between gap-3">
+          <div className="flex items-center gap-3 overflow-x-auto text-sm text-[#4D4D4D] dark:text-[#BFBFBF]">
+            <span className="font-bold">Paragraph</span>
+            <span className="font-bold">B</span>
+            <span className="italic">I</span>
+            <span className="underline">U</span>
+            <span>"</span>
+            <span>∞</span>
+            <span>☰</span>
+            <span>⦿</span>
+            <span>🖼</span>
+            <span>◻</span>
+          </div>
+          <div className="hidden items-center gap-3 text-[#4D4D4D] dark:text-[#BFBFBF] sm:flex">
+            <Search className="h-4 w-4" />
+            <MoreVertical className="h-4 w-4" />
           </div>
         </div>
+      </div>
 
-        {/* Right Side: Configuration Sidebar */}
-        <aside className="sidebar-aside" style={{
-          backgroundColor: '#fff',
-          borderLeft: '1px solid rgba(0,0,0,0.05)',
-          padding: '24px',
-          overflowY: 'auto',
-          display: 'flex',
-          flexDirection: 'column',
-          gap: '24px',
-          scrollbarWidth: 'none'
-        }}>
-          {/* Section: Publication */}
-          <ConfigSection title="Publication">
-            <div style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
-              <ConfigInput
-                label="STATUS"
-                type="select"
-                options={['DRAFT', 'PUBLISHED', 'SCHEDULED']}
-                value={articleStatus}
-                onChange={setArticleStatus}
-              />
-              <ConfigInput
-                label="PUBLISH DATE"
-                type="date"
-                placeholder="yyyy-mm-dd"
-                value={publishDate}
-                onChange={setPublishDate}
-              />
-              <ConfigInput
-                label="URL SLUG"
-                type="text"
-                placeholder="minimalist-event-design"
-                value={urlSlug}
-                onChange={setUrlSlug}
-              />
-            </div>
-          </ConfigSection>
-
-          {/* Section: SEO */}
-          <ConfigSection title="SEO" badge={`${seoScore}/100`}>
-            <div style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
+      <div className="mx-auto grid w-full max-w-[1360px] grid-cols-1 gap-4 px-4 py-4 lg:gap-5 lg:px-6 xl:grid-cols-[1.65fr_0.75fr]">
+        <section className="space-y-4 rounded-2xl">
+          <div className="rounded-3xl border border-dashed border-[#FC8435] bg-white/60 p-4 dark:bg-[#1E1E1E]/70 sm:p-6">
+            <div className="mx-auto flex min-h-[180px] max-w-[360px] flex-col items-center justify-center gap-3 text-center">
+              <button className="rounded-full bg-[#FFF0E6] p-3 text-[#FB6503]">
+                <UploadCloud className="h-5 w-5" />
+              </button>
               <div>
-                <LabelText text="META DESCRIPTION" />
-                <textarea
-                  placeholder="Enter meta description..."
-                  value={metaDescription}
-                  onChange={(e) => setMetaDescription(e.target.value)}
-                  style={{
-                    width: '100%',
-                    height: '100px',
-                    padding: '12px',
-                    borderRadius: '12px',
-                    border: '1px solid rgba(0,0,0,0.06)',
-                    fontSize: '13px',
-                    lineHeight: '1.6',
-                    resize: 'none',
-                    backgroundColor: '#fcfcfc',
-                    outline: 'none'
-                  }}
-                />
-                <p style={{ textAlign: 'right', fontSize: '10px', color: '#999', marginTop: '4px', fontWeight: 600 }}>{metaDescription.length}/160</p>
+                <p className="text-[24px] font-medium text-[#212121] dark:text-[#F3F3F3] sm:text-[31px]">Upload Featured Image:</p>
+                <p className="text-sm text-[#6A6A6A]">Drag & drop or click to browse</p>
+                <p className="text-xs text-[#999999]">Recommended size: 1280x720</p>
               </div>
-              <div>
-                <LabelText text="FOCUS KEYWORD" />
-                <div style={{
-                  display: 'flex',
-                  flexWrap: 'wrap',
-                  gap: '8px',
-                  padding: '12px',
-                  borderRadius: '12px',
-                  border: '1px solid rgba(0,0,0,0.06)',
-                  backgroundColor: '#fcfcfc'
-                }}>
-                  {focusKeywords.map(kw => (
-                    <div key={kw} style={{ display: 'flex', alignItems: 'center', gap: '4px', backgroundColor: '#eee', padding: '4px 8px', borderRadius: '6px', fontSize: '11px', fontWeight: 700 }}>
-                      {kw} <X size={10} style={{ cursor: 'pointer' }} onClick={() => handleRemoveKeyword(kw)} />
-                    </div>
-                  ))}
-                  <input
-                    placeholder="Add..."
-                    style={{ border: 'none', background: 'none', fontSize: '12px', fontWeight: 600, minWidth: '60px', outline: 'none', flex: 1 }}
-                    onKeyDown={(e) => {
-                      if (e.key === 'Enter') {
-                        e.preventDefault()
-                        handleAddKeyword(e.currentTarget.value)
-                        e.currentTarget.value = ''
-                      }
-                    }}
-                  />
-                </div>
-              </div>
-            </div>
-          </ConfigSection>
-
-          {/* Section: Channels */}
-          <ConfigSection title="Channels">
-            <div style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
-              <ChannelItem icon="W" name="WordPress" active={true} />
-              <ChannelItem icon="G" name="Ghost" active={false} />
-              <ChannelItem icon="M" name="Medium" active={false} />
-              <button style={{ background: 'none', border: 'none', fontSize: '11px', fontWeight: 800, color: '#1a1a1a', textDecoration: 'underline', marginTop: '4px', cursor: 'pointer' }}>
-                Manage Integrations
+              <input
+                value={featuredImage}
+                onChange={(e) => setFeaturedImage(e.target.value)}
+                placeholder="Image URL"
+                className="w-full rounded-xl border border-[#E9E9E9] bg-white px-3 py-2 text-sm outline-none dark:border-[#3A3A3A] dark:bg-[#242424] dark:text-[#F7F7F7]"
+              />
+              <input
+                ref={featuredImageInputRef}
+                type="file"
+                accept="image/*"
+                className="hidden"
+                onChange={(e) => {
+                  const file = e.target.files?.[0]
+                  if (file) void handleFeaturedImageUpload(file)
+                }}
+              />
+              <button
+                type="button"
+                onClick={() => featuredImageInputRef.current?.click()}
+                disabled={uploadingImage}
+                className="rounded-full border border-[#FB6503] bg-[#FFF0E6] px-4 py-2 text-xs font-bold text-[#212121] disabled:opacity-70"
+              >
+                {uploadingImage ? "Uploading..." : "Upload Image"}
               </button>
             </div>
-          </ConfigSection>
+          </div>
 
-          {/* Action Area */}
-          <div style={{ marginTop: 'auto', display: 'flex', flexDirection: 'column', gap: '12px', padding: '12px 0 24px' }}>
-            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '12px' }}>
-              <SidebarActionButton text="Save Draft" onClick={() => handleSave()} />
-              <SidebarActionButton text="Schedule" onClick={() => { }} />
+          <input
+            value={title}
+            onChange={(e) => setTitle(e.target.value)}
+            className="w-full bg-transparent text-[34px] font-bold leading-none text-[#212121] outline-none dark:text-[#F7F7F7] sm:text-[40px] md:text-[49px]"
+            placeholder="The Art of Minimalist Event Desing"
+          />
+
+          <textarea
+            value={content}
+            onChange={(e) => setContent(e.target.value)}
+            placeholder="Start typing to continue..."
+            className="min-h-[420px] w-full rounded-3xl border border-[#E9E9E9] bg-white/70 p-4 text-base leading-relaxed text-[#212121] outline-none dark:border-[#3A3A3A] dark:bg-[#1E1E1E]/80 dark:text-[#F2F2F2] sm:min-h-[620px] sm:p-5"
+          />
+
+          <div className="flex items-center justify-between text-sm text-[#4D4D4D] dark:text-[#BFBFBF]">
+            <p>Words: {words}</p>
+            <p>Reading time - {readingTime} min</p>
+          </div>
+        </section>
+
+        <aside className="space-y-3">
+          <div className="rounded-3xl border border-[#E9E9E9] bg-white/80 p-4 dark:border-[#2F2F2F] dark:bg-[#1E1E1E]/90">
+            <h3 className="text-[25px] font-bold text-[#1E1E1E] dark:text-[#F3F3F3]">Publication</h3>
+            <div className="mt-3 space-y-3 text-sm">
+              <div>
+                <p className="mb-1 text-[10px] font-bold text-[#999999]">STATUS</p>
+                <input value={status} onChange={(e) => setStatus(e.target.value)} className="w-full rounded-md border border-[#E9E9E9] bg-[#FFFBF7] px-2 py-1.5 dark:border-[#3A3A3A] dark:bg-[#2A2A2A]" />
+              </div>
+              <div>
+                <p className="mb-1 text-[10px] font-bold text-[#999999]">PUBLISH DATE</p>
+                <div className="flex items-center gap-2 rounded-md border border-[#E9E9E9] bg-[#FFFBF7] px-2 py-1.5 dark:border-[#3A3A3A] dark:bg-[#2A2A2A]">
+                  <input type="date" value={publishDate} onChange={(e) => setPublishDate(e.target.value)} className="w-full bg-transparent outline-none" />
+                  <Calendar className="h-4 w-4 text-[#6A6A6A]" />
+                </div>
+              </div>
+              <div>
+                <p className="mb-1 text-[10px] font-bold text-[#999999]">URL SLUG</p>
+                <input value={slug} onChange={(e) => setSlug(e.target.value)} className="w-full rounded-md border border-[#E9E9E9] bg-[#FFFBF7] px-2 py-1.5 dark:border-[#3A3A3A] dark:bg-[#2A2A2A]" />
+              </div>
             </div>
-            <button
-              onClick={handleDeleteArticle}
-              style={{
-                background: 'none',
-                border: 'none',
-                color: '#FF3B30',
-                fontSize: '13px',
-                fontWeight: 800,
-                padding: '8px',
-                cursor: 'pointer'
-              }}
-            >
-              Delete Article
+          </div>
+
+          <div className="rounded-3xl border border-[#E9E9E9] bg-white/80 p-4 dark:border-[#2F2F2F] dark:bg-[#1E1E1E]/90">
+            <div className="mb-2 flex items-center justify-between">
+              <h3 className="text-[25px] font-bold text-[#1E1E1E] dark:text-[#F3F3F3]">SEO</h3>
+              <span className="text-sm font-bold text-[#FB6503]">85/100</span>
+            </div>
+            <div className="space-y-3 text-sm">
+              <div>
+                <p className="mb-1 text-[10px] font-bold text-[#999999]">META DESCRIPTION</p>
+                <textarea
+                  value={metaDescription}
+                  onChange={(e) => setMetaDescription(e.target.value)}
+                  className="min-h-[70px] w-full rounded-md border border-[#E9E9E9] bg-[#FFFBF7] px-2 py-1.5 outline-none dark:border-[#3A3A3A] dark:bg-[#2A2A2A]"
+                  placeholder="Enter a short description of the article"
+                />
+              </div>
+              <div>
+                <p className="mb-1 text-[10px] font-bold text-[#999999]">FOCUS KEYWORD</p>
+                <input value={focusKeyword} onChange={(e) => setFocusKeyword(e.target.value)} className="w-full rounded-md border border-[#E9E9E9] bg-[#FFFBF7] px-2 py-1.5 dark:border-[#3A3A3A] dark:bg-[#2A2A2A]" />
+              </div>
+            </div>
+          </div>
+
+          <div className="rounded-3xl border border-[#E9E9E9] bg-white/80 p-4 dark:border-[#2F2F2F] dark:bg-[#1E1E1E]/90">
+            <h3 className="text-[25px] font-bold text-[#1E1E1E] dark:text-[#F3F3F3]">Channels</h3>
+            <div className="mt-3 space-y-2 text-sm text-[#212121] dark:text-[#F2F2F2]">
+              <label className="flex items-center justify-between"><span>Wedding Blog</span><button type="button" onClick={() => setChannelWedding((v) => !v)}>{channelWedding ? <CheckSquare className="h-4 w-4" /> : <Square className="h-4 w-4" />}</button></label>
+              <label className="flex items-center justify-between"><span>LinkedIn</span><button type="button" onClick={() => setChannelLinkedIn((v) => !v)}>{channelLinkedIn ? <CheckSquare className="h-4 w-4" /> : <Square className="h-4 w-4" />}</button></label>
+              <label className="flex items-center justify-between"><span>Instagram</span><button type="button" onClick={() => setChannelInstagram((v) => !v)}>{channelInstagram ? <CheckSquare className="h-4 w-4" /> : <Square className="h-4 w-4" />}</button></label>
+            </div>
+          </div>
+
+          <div className="rounded-3xl border border-[#E9E9E9] bg-white/80 p-4 dark:border-[#2F2F2F] dark:bg-[#1E1E1E]/90">
+            <h3 className="text-[25px] font-bold text-[#1E1E1E] dark:text-[#F3F3F3]">Settings</h3>
+            <div className="mt-3 space-y-2 text-sm">
+              <label className="flex items-center justify-between"><span>Wedding Blog</span><input checked={settingWedding} onChange={(e) => setSettingWedding(e.target.checked)} type="checkbox" /></label>
+              <label className="flex items-center justify-between"><span>LinkedIn</span><input checked={settingLinkedIn} onChange={(e) => setSettingLinkedIn(e.target.checked)} type="checkbox" /></label>
+              <label className="flex items-center justify-between"><span>Instagram</span><input checked={settingInstagramA} onChange={(e) => setSettingInstagramA(e.target.checked)} type="checkbox" /></label>
+              <label className="flex items-center justify-between"><span>Instagram</span><input checked={settingInstagramB} onChange={(e) => setSettingInstagramB(e.target.checked)} type="checkbox" /></label>
+            </div>
+          </div>
+
+          <div className="space-y-2 pt-1">
+            <div className="flex flex-col gap-2 sm:flex-row">
+              <button onClick={() => saveArticle("DRAFT")} disabled={saving} className="w-full rounded-full border border-[#FB6503] bg-[#FFFEFD] px-4 py-2 text-sm font-bold text-[#212121]">
+                {saving ? "Saving..." : "Save Draft"}
+              </button>
+              <button onClick={() => saveArticle("SCHEDULED")} disabled={saving} className="w-full rounded-full border border-[#FB6503] bg-[#FFF0E6] px-4 py-2 text-sm font-bold text-[#1E1E1E]">
+                Schedule Publish
+              </button>
+            </div>
+            <button onClick={deleteArticle} disabled={deleting} className="w-full text-sm font-medium text-[#FB6503]">
+              {deleting ? "Deleting..." : "Delete Article"}
             </button>
           </div>
         </aside>
       </div>
 
-      {/* Floating AI Panel (Toggled via header) */}
-      {
-        showAISidebar && (
-          <div className="ai-panel-floating" style={{
-            position: 'fixed',
-            top: '84px',
-            right: '400px',
-            width: '380px',
-            height: 'calc(100vh - 100px)',
-            backgroundColor: '#fff',
-            borderRadius: '24px',
-            boxShadow: '0 20px 50px rgba(0,0,0,0.1)',
-            zIndex: 200,
-            border: '1px solid rgba(0,0,0,0.05)',
-            display: 'flex',
-            flexDirection: 'column',
-            overflow: 'hidden'
-          }}>
-            <div style={{ padding: '20px', borderBottom: '1px solid #eee', display: 'flex', justifyContent: 'space-between', alignItems: 'center', backgroundColor: '#fcfcfc' }}>
-              <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
-                <Sparkles size={18} color="#FF7A33" />
-                <h3 style={{ margin: 0, fontSize: '16px', fontWeight: 800 }}>AI Assistant</h3>
-              </div>
-              <button onClick={() => setShowAISidebar(false)} style={{ background: 'none', border: 'none', cursor: 'pointer', padding: '4px' }}><X size={20} /></button>
-            </div>
-            <div style={{ flex: 1, overflowY: 'auto', padding: '20px' }}>
-              <div className="flex gap-2 mb-6">
-                <button
-                  className="ai-tab-button"
-                  onClick={() => setActiveAITab('content')}
-                  style={{
-                    flex: 1, padding: '10px', borderRadius: '10px', border: 'none',
-                    backgroundColor: activeAITab === 'content' ? '#1a1a1a' : '#f5f5f5',
-                    color: activeAITab === 'content' ? '#fff' : '#666',
-                    fontSize: '12px', fontWeight: 700, cursor: 'pointer'
-                  }}
-                >Content</button>
-                <button
-                  className="ai-tab-button"
-                  onClick={() => setActiveAITab('images')}
-                  style={{
-                    flex: 1, padding: '10px', borderRadius: '10px', border: 'none',
-                    backgroundColor: activeAITab === 'images' ? '#1a1a1a' : '#f5f5f5',
-                    color: activeAITab === 'images' ? '#fff' : '#666',
-                    fontSize: '12px', fontWeight: 700, cursor: 'pointer'
-                  }}
-                >Images</button>
-                <button
-                  className="ai-tab-button"
-                  onClick={() => setActiveAITab('seo')}
-                  style={{
-                    flex: 1, padding: '10px', borderRadius: '10px', border: 'none',
-                    backgroundColor: activeAITab === 'seo' ? '#1a1a1a' : '#f5f5f5',
-                    color: activeAITab === 'seo' ? '#fff' : '#666',
-                    fontSize: '12px', fontWeight: 700, cursor: 'pointer'
-                  }}
-                >SEO</button>
-              </div>
-
-              {activeAITab === 'content' && (
-                <div className="space-y-6">
-                  <div style={{ padding: '16px', backgroundColor: '#f8f9fa', borderRadius: '16px', border: '1px solid #eee' }}>
-                    <LabelText text="AI MODEL" />
-                    <AIModelSelector value={selectedAIModel} onChange={setSelectedAIModel} />
-                  </div>
-
-                  <div className="space-y-3">
-                    <button onClick={handleGenerateContent} disabled={generateContentLoading} style={{ width: '100%', padding: '14px', backgroundColor: '#1a1a1a', color: '#fff', borderRadius: '12px', border: 'none', fontSize: '13px', fontWeight: 800, cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '8px' }}>
-                      {generateContentLoading ? <Loader2 size={16} className="animate-spin" /> : <Sparkles size={16} />}
-                      {generateContentLoading ? "Generating..." : "Generate Full Article"}
-                    </button>
-
-                    <button onClick={handleGenerateOutline} disabled={generateOutlineLoading} style={{ width: '100%', padding: '14px', backgroundColor: '#fff', color: '#1a1a1a', borderRadius: '12px', border: '1px solid #eee', fontSize: '13px', fontWeight: 800, cursor: 'pointer' }}>
-                      {generateOutlineLoading ? "Generating..." : "Create Outline"}
-                    </button>
-                  </div>
-                </div>
-              )}
-
-              {activeAITab === 'images' && (
-                <div className="space-y-4">
-                  <LabelText text="IMAGE PROMPT" />
-                  <textarea
-                    value={imagePrompt}
-                    onChange={(e) => setImagePrompt(e.target.value)}
-                    placeholder="Describe the image you want to generate..."
-                    style={{ width: '100%', height: '120px', padding: '16px', borderRadius: '16px', border: '1px solid #eee', fontSize: '13px', resize: 'none', outline: 'none' }}
-                  />
-                  <button onClick={handleGenerateImage} disabled={imageGenerating} style={{ width: '100%', padding: '14px', backgroundColor: '#FF7A33', color: '#fff', borderRadius: '12px', border: 'none', fontWeight: 800, cursor: 'pointer' }}>
-                    {imageGenerating ? "Processing..." : "Generate Asset"}
-                  </button>
-                </div>
-              )}
-
-              {activeAITab === 'seo' && (
-                <div className="space-y-6">
-                  <button onClick={handleAnalyzeSEO} disabled={seoAnalyzing} style={{ width: '100%', padding: '14px', backgroundColor: '#4f46e5', color: '#fff', borderRadius: '12px', border: 'none', fontWeight: 800 }}>
-                    {seoAnalyzing ? "Auditing..." : "Run SEO Analysis"}
-                  </button>
-                  {seoAnalysis && (
-                    <div style={{ padding: '16px', backgroundColor: '#f0f3ff', borderRadius: '16px', border: '1px solid #e0e7ff' }}>
-                      <h4 style={{ fontSize: '13px', fontWeight: 800, color: '#4338ca', marginBottom: '10px' }}>Analysis Report</h4>
-                      <div style={{ fontSize: '12px', color: '#4b5563', lineHeight: '1.6', whiteSpace: 'pre-wrap' }}>
-                        {typeof seoAnalysis === 'string' ? seoAnalysis : JSON.stringify(seoAnalysis, null, 2)}
-                      </div>
-                    </div>
-                  )}
-                </div>
-              )}
+      <footer className="mx-auto mt-6 w-full max-w-[1360px] rounded-t-[40px] bg-gradient-to-b from-[#FFF6F0] to-[rgba(255,211,183,0.7)] px-4 py-8 dark:from-[#211A16] dark:to-[#1B1613] sm:rounded-t-[60px] sm:px-8 sm:py-10">
+        <p className="text-center text-[56px] font-black uppercase leading-none text-[#FB65031F] sm:text-[100px] md:text-[140px]">LOGOIPSUM</p>
+        <div className="mt-6 flex flex-wrap items-start justify-between gap-6 border-b border-[#BABABA] pb-6">
+          <div>
+            <p className="text-base text-[#212121] dark:text-[#F2F2F2]">All Assistant That Captures Every Details.</p>
+            <p className="mt-3 text-base font-bold text-[#212121] dark:text-[#F2F2F2]">Our Social Media Accounts</p>
+            <p className="text-sm text-[#4D4D4D] dark:text-[#BFBFBF]">Twitter • Facebook • LinkedIn</p>
+          </div>
+          <div className="text-base font-bold text-[#212121] dark:text-[#F2F2F2]">Home • About • Features • Pricing • Documentation</div>
+          <div className="w-full max-w-[340px]">
+            <p className="text-base font-bold text-[#212121] dark:text-[#F2F2F2]">Stay Connected</p>
+            <div className="mt-2 flex items-center justify-between rounded-full bg-[#FFF0E6] p-2 dark:bg-[#2A221E]">
+              <input className="w-full bg-transparent px-3 text-sm outline-none dark:text-[#F2F2F2]" placeholder="Enter Your Email" />
+              <button className="rounded-full bg-[#FFFEFD] px-4 py-2 text-sm font-bold dark:bg-[#242424] dark:text-[#F2F2F2]">Submit</button>
             </div>
           </div>
-        )
-      }
-
-      <PublishModal
-        open={showPublishModal}
-        onClose={() => setShowPublishModal(false)}
-        articleId={articleId}
-        articleTitle={title}
-      />
-    </div>
-  )
-}
-
-// Reusable Helper Components for the Premium UI
-function ConfigSection({ title, children, badge }: any) {
-  return (
-    <div className="config-section" style={{
-      backgroundColor: '#fff',
-      borderRadius: '24px',
-      border: '1px solid rgba(0,0,0,0.05)',
-      padding: '24px',
-      boxShadow: '0 4px 12px rgba(0,0,0,0.02)'
-    }}>
-      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '20px' }}>
-        <h3 style={{ fontSize: '14px', fontWeight: 800, color: '#1a1a1a', margin: 0 }}>{title}</h3>
-        {badge && <span style={{ fontSize: '12px', fontWeight: 800, color: '#FF7A33' }}>{badge}</span>}
-      </div>
-      {children}
-    </div>
-  )
-}
-
-function LabelText({ text }: { text: string }) {
-  return <label style={{ display: 'block', fontSize: '10px', fontWeight: 800, color: '#999', marginBottom: '8px', letterSpacing: '0.5px' }}>{text}</label>
-}
-
-function ConfigInput({ label, type, placeholder, options, value, onChange }: any) {
-  return (
-    <div>
-      <LabelText text={label} />
-      <div style={{ position: 'relative' }}>
-        {type === 'select' ? (
-          <select
-            value={value}
-            onChange={(e) => onChange?.(e.target.value)}
-            style={{ width: '100%', padding: '12px 16px', borderRadius: '12px', border: '1px solid rgba(0,0,0,0.06)', backgroundColor: '#fcfcfc', fontSize: '13px', fontWeight: 600, appearance: 'none', cursor: 'pointer', outline: 'none' }}
-          >
-            {options.map((opt: string) => <option key={opt}>{opt}</option>)}
-          </select>
-        ) : (
-          <div style={{ position: 'relative', display: 'flex', alignItems: 'center' }}>
-            <input
-              className="config-input"
-              type={type}
-              placeholder={placeholder}
-              value={value}
-              onChange={(e) => onChange?.(e.target.value)}
-              style={{ width: '100%', padding: '12px 16px', borderRadius: '12px', border: '1px solid rgba(0,0,0,0.06)', backgroundColor: '#fcfcfc', fontSize: '13px', fontWeight: 600, outline: 'none' }}
-            />
-            {type === 'date' && <Calendar size={14} color="#666" style={{ position: 'absolute', right: '16px', pointerEvents: 'none' }} />}
-          </div>
-        )}
-        {type === 'select' && (
-          <ChevronDown size={14} color="#666" style={{ position: 'absolute', right: '16px', top: '50%', transform: 'translateY(-50%)', pointerEvents: 'none' }} />
-        )}
-      </div>
-    </div>
-  )
-}
-
-function ChannelItem({ icon, name, active }: any) {
-  return (
-    <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
-      <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
-        <div style={{
-          width: '28px',
-          height: '28px',
-          borderRadius: '50%',
-          backgroundColor: '#FFF5F0',
-          color: '#FF7A33',
-          display: 'flex',
-          alignItems: 'center',
-          justifyContent: 'center',
-          fontSize: '11px',
-          fontWeight: 800
-        }}>
-          {icon}
         </div>
-        <span style={{ fontSize: '13px', fontWeight: 600, color: '#666' }}>{name}</span>
-      </div>
-      <Checkbox checked={active} />
+        <div className="mt-4 flex flex-wrap items-center justify-between text-sm text-[#212121] dark:text-[#F2F2F2]">
+          <p>Privacy Policy • Term & Condition</p>
+          <p>© 2025 logoipsum. All Rights Reserved.</p>
+        </div>
+      </footer>
     </div>
-  )
-}
-
-function CheckboxItem({ label, checked }: any) {
-  return (
-    <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
-      <Checkbox checked={checked} />
-      <span style={{ fontSize: '13px', fontWeight: 600, color: '#666' }}>{label}</span>
-    </div>
-  )
-}
-
-function Checkbox({ checked }: { checked: boolean }) {
-  return (
-    <div style={{
-      width: '18px',
-      height: '18px',
-      borderRadius: '4px',
-      border: checked ? 'none' : '2px solid #ddd',
-      backgroundColor: checked ? '#1a1a1a' : 'transparent',
-      display: 'flex',
-      alignItems: 'center',
-      justifyContent: 'center'
-    }}>
-      {checked && <div style={{ width: '8px', height: '4px', borderLeft: '2px solid #fff', borderBottom: '2px solid #fff', transform: 'rotate(-45deg)', marginTop: '-1px' }} />}
-    </div>
-  )
-}
-
-function ToggleItem({ label, active }: any) {
-  return (
-    <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
-      <span style={{ fontSize: '13px', fontWeight: 600, color: '#666' }}>{label}</span>
-      <div style={{
-        width: '36px',
-        height: '20px',
-        borderRadius: '20px',
-        backgroundColor: active ? '#FF7A33' : '#eee',
-        position: 'relative',
-        cursor: 'pointer',
-        transition: 'all 0.2s ease'
-      }}>
-        <div style={{
-          width: '16px',
-          height: '16px',
-          borderRadius: '50%',
-          backgroundColor: '#fff',
-          position: 'absolute',
-          top: '2px',
-          left: active ? '18px' : '2px',
-          transition: 'all 0.2s ease',
-          boxShadow: '0 2px 4px rgba(0,0,0,0.1)'
-        }} />
-      </div>
-    </div>
-  )
-}
-
-function EditorToolButton({ icon, onClick, className }: any) {
-  return (
-    <button
-      onClick={onClick}
-      className={className}
-      style={{ padding: '8px', borderRadius: '8px', border: 'none', backgroundColor: 'transparent', color: '#666', cursor: 'pointer', transition: 'all 0.2s ease' }}
-      onMouseOver={(e: any) => e.currentTarget.style.backgroundColor = '#f8f8f8'}
-      onMouseOut={(e: any) => e.currentTarget.style.backgroundColor = 'transparent'}
-    >
-      {icon}
-    </button>
-  )
-}
-
-function Divider({ className }: { className?: string }) {
-  return <div className={className} style={{ width: '1px', height: '20px', backgroundColor: '#eee', margin: '0 4px' }} />
-}
-
-function SidebarActionButton({ text, onClick }: any) {
-  return (
-    <button
-      onClick={onClick}
-      style={{
-        padding: '12px',
-        borderRadius: '12px',
-        border: '1px solid #FF7A33',
-        backgroundColor: '#fff',
-        color: '#FF7A33',
-        fontWeight: 800,
-        fontSize: '12px',
-        cursor: 'pointer',
-        transition: 'all 0.2s ease',
-        whiteSpace: 'nowrap'
-      }}
-      onMouseOver={(e: any) => { e.currentTarget.style.backgroundColor = '#FF7A33'; e.currentTarget.style.color = '#fff' }}
-      onMouseOut={(e: any) => { e.currentTarget.style.backgroundColor = '#fff'; e.currentTarget.style.color = '#FF7A33' }}
-    >
-      {text}
-    </button>
   )
 }

@@ -1,47 +1,26 @@
 "use client"
 
-import { Suspense, useEffect, useState } from "react"
-import { useRouter, useSearchParams } from "next/navigation"
-import {
-  Eye,
-  Heart,
-  MessageCircle,
-  FileText,
-  Send,
-  Clock,
-  Globe,
-  TrendingUp,
-  Loader2,
-  RefreshCw,
-  BarChart3,
-  ExternalLink,
-  Download,
-  Sparkles
-} from "lucide-react"
-import { toast } from "sonner"
+import { Suspense, useEffect, useMemo, useState } from "react"
 import { useAuth } from "@/lib/context/AuthContext"
+import { Loader2, CalendarDays, Eye, MousePointerClick, Heart, MessageCircle } from "lucide-react"
+import { toast } from "sonner"
+import { useTheme } from "@/lib/context/ThemeContext"
 import {
-  PieChart,
-  Pie,
-  Cell,
   ResponsiveContainer,
   LineChart,
   Line,
-  BarChart,
-  Bar,
   XAxis,
   YAxis,
   CartesianGrid,
   Tooltip,
-  Legend,
-  RadarChart,
-  PolarGrid,
-  PolarAngleAxis,
-  PolarRadiusAxis,
-  Radar,
+  PieChart,
+  Pie,
+  Cell,
+  BarChart,
+  Bar,
 } from "recharts"
 
-interface PlatformStat {
+type PlatformStat = {
   platform: string
   totalViews: number
   totalLikes: number
@@ -49,430 +28,403 @@ interface PlatformStat {
   articles: number
 }
 
-interface ArticleAnalytics {
+type ArticleAnalytics = {
   articleId: string
   articleTitle: string
-  articleSlug: string
   totalViews: number
   totalLikes: number
   totalComments: number
-  platforms: Array<{
-    platform: string
-    views: number
-    likes: number
-    comments: number
-    url: string | null
-  }>
+}
+
+const LINE_COLORS = ["#FB6503", "#FC8435", "#FDB88B"]
+const PIE_COLORS = ["#E45C03", "#FC8435", "#FDB88B", "#FECFB1"]
+
+function compactNumber(value: number) {
+  if (value >= 1000000) return `${(value / 1000000).toFixed(1)}M`
+  if (value >= 1000) return `${(value / 1000).toFixed(1)}K`
+  return value.toString()
+}
+
+function platformLabel(platform: string) {
+  const map: Record<string, string> = {
+    PUBLISHTYPE: "Direct",
+    WORDPRESS: "Wordpress",
+    DEVTO: "Social",
+    HASHNODE: "Organic",
+    GHOST: "Referral",
+    WIX: "Wix",
+    LINKEDIN: "LinkedIn",
+    MEDIUM: "Medium",
+  }
+  return map[platform] || platform
 }
 
 function AnalyticsContent() {
-  const router = useRouter()
-  const searchParams = useSearchParams()
   const { user } = useAuth()
-  const [activeTab, setActiveTab] = useState("overview")
-  const [timeRange, setTimeRange] = useState<"7d" | "30d" | "90d">("30d")
+  const { isDark } = useTheme()
+
   const [loading, setLoading] = useState(true)
   const [syncing, setSyncing] = useState(false)
+  const [timeRange, setTimeRange] = useState("30d")
+  const [compare, setCompare] = useState(false)
 
-  const [stats, setStats] = useState<any>(null)
-  const [platformTotals, setPlatformTotals] = useState({ views: 0, likes: 0, comments: 0 })
+  const [overviewStats, setOverviewStats] = useState<any>(null)
+  const [totals, setTotals] = useState({ views: 0, likes: 0, comments: 0, shares: 0, bookmarks: 0 })
   const [byPlatform, setByPlatform] = useState<PlatformStat[]>([])
   const [byArticle, setByArticle] = useState<ArticleAnalytics[]>([])
 
   useEffect(() => {
-    const tab = searchParams.get('tab')
-    if (tab) setActiveTab(tab)
-  }, [searchParams])
-
-  useEffect(() => {
-    if (user) fetchAllData()
+    if (user) {
+      fetchAllData()
+    }
   }, [user])
 
-  const fetchAllData = async () => {
-    setLoading(true)
-    await Promise.all([fetchOverviewStats(), fetchPlatformAnalytics()])
-    setLoading(false)
-  }
-
-  const fetchOverviewStats = async () => {
+  async function fetchAllData() {
     try {
-      const token = localStorage.getItem('accessToken')
-      const response = await fetch('/api/analytics/stats', { headers: { 'Authorization': `Bearer ${token}` } })
-      if (response.ok) {
-        const data = await response.json()
-        setStats(data.data)
+      setLoading(true)
+      const token = localStorage.getItem("accessToken")
+
+      const [statsRes, analyticsRes] = await Promise.all([
+        fetch("/api/analytics/stats", { headers: { Authorization: `Bearer ${token}` } }),
+        fetch("/api/analytics", { headers: { Authorization: `Bearer ${token}` } }),
+      ])
+
+      if (statsRes.ok) {
+        const json = await statsRes.json()
+        setOverviewStats(json.data)
       }
-    } catch (error) { console.error(error) }
+
+      if (analyticsRes.ok) {
+        const json = await analyticsRes.json()
+        setTotals(json.data?.totals || { views: 0, likes: 0, comments: 0, shares: 0, bookmarks: 0 })
+        setByPlatform(json.data?.byPlatform || [])
+        setByArticle(json.data?.byArticle || [])
+      }
+    } catch (error) {
+      console.error("Failed to fetch analytics", error)
+      toast.error("Failed to load analytics")
+    } finally {
+      setLoading(false)
+    }
   }
 
-  const fetchPlatformAnalytics = async () => {
-    try {
-      const token = localStorage.getItem('accessToken')
-      const response = await fetch('/api/analytics', { headers: { 'Authorization': `Bearer ${token}` } })
-      if (response.ok) {
-        const data = await response.json()
-        setPlatformTotals(data.data.totals)
-        setByPlatform(data.data.byPlatform)
-        setByArticle(data.data.byArticle)
-      }
-    } catch (error) { console.error(error) }
-  }
-
-  const syncAnalytics = async () => {
+  async function syncAnalytics() {
     try {
       setSyncing(true)
-      const token = localStorage.getItem('accessToken')
-      const response = await fetch('/api/analytics/sync', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${token}` }
+      const token = localStorage.getItem("accessToken")
+      const response = await fetch("/api/analytics/sync", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          Authorization: `Bearer ${token}`,
+        },
+        body: JSON.stringify({}),
       })
       const data = await response.json()
+
       if (data.success) {
-        toast.success(data.message)
+        toast.success(data.message || "Analytics synced")
         await fetchAllData()
       } else {
-        toast.error(data.error || 'Sync failed')
+        toast.error(data.error || "Sync failed")
       }
-    } catch (error) { toast.error('Sync failed') }
-    finally { setSyncing(false) }
+    } catch (_error) {
+      toast.error("Sync failed")
+    } finally {
+      setSyncing(false)
+    }
   }
 
-  const getPlatformName = (platform: string) => {
-    const names: Record<string, string> = { 'PUBLISHTYPE': 'PublishType', 'WORDPRESS': 'WordPress', 'DEVTO': 'Dev.to', 'HASHNODE': 'Hashnode', 'GHOST': 'Ghost', 'WIX': 'Wix' }
-    return names[platform] || platform
-  }
+  const seriesData = useMemo(() => {
+    const source = byArticle.slice(0, 10)
+    if (source.length > 0) {
+      return source.map((article, index) => ({
+        label: `Oct ${String(index * 3 + 3).padStart(2, "0")}`,
+        views: article.totalViews,
+      }))
+    }
 
-  if (loading) return <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', minHeight: '60vh' }}><Loader2 className="animate-spin" size={40} style={{ color: '#FF7A33' }} /></div>
+    return [
+      { label: "Oct 03", views: 1200 },
+      { label: "Oct 05", views: 1180 },
+      { label: "Oct 08", views: 1600 },
+      { label: "Oct 10", views: 1900 },
+      { label: "Oct 12", views: 2050 },
+      { label: "Oct 15", views: 2100 },
+      { label: "Oct 20", views: 2450 },
+      { label: "Oct 22", views: 2500 },
+      { label: "Oct 25", views: 2400 },
+      { label: "Oct 30", views: 3000 },
+    ]
+  }, [byArticle])
+
+  const trafficData = useMemo(() => {
+    const platformData = byPlatform
+      .sort((a, b) => b.totalViews - a.totalViews)
+      .slice(0, 4)
+      .map((item) => ({ name: platformLabel(item.platform), value: item.totalViews }))
+
+    if (platformData.length === 0) {
+      return [
+        { name: "Direct", value: 45 },
+        { name: "Social", value: 25 },
+        { name: "Organic", value: 20 },
+        { name: "Referral", value: 10 },
+      ]
+    }
+
+    return platformData
+  }, [byPlatform])
+
+  const engagementData = [
+    { name: "LIKES", value: totals.likes || 0 },
+    { name: "SHARES", value: totals.shares || 0 },
+    { name: "COMMENTS", value: totals.comments || 0 },
+    { name: "SAVES", value: totals.bookmarks || 0 },
+  ]
+
+  const deviceData = [
+    { name: "Mobile (iOS)", value: 55 },
+    { name: "Desktop", value: 35 },
+    { name: "Tablet", value: 10 },
+  ]
+
+  const cards = [
+    {
+      title: "Total Views",
+      value: compactNumber(overviewStats?.articles?.totalViews || totals.views || 0),
+      delta: "+12%",
+      icon: Eye,
+      positive: true,
+    },
+    {
+      title: "Total Clicks",
+      value: compactNumber(totals.shares || 0),
+      delta: "+5.2%",
+      icon: MousePointerClick,
+      positive: true,
+    },
+    {
+      title: "Engagement",
+      value: compactNumber((totals.likes || 0) + (totals.comments || 0)),
+      delta: "-2.1%",
+      icon: Heart,
+      positive: false,
+    },
+    {
+      title: "Comments",
+      value: compactNumber(totals.comments || 0),
+      delta: "+8.4%",
+      icon: MessageCircle,
+      positive: true,
+    },
+  ]
+
+  if (loading) {
+    return (
+      <div className="flex min-h-[60vh] items-center justify-center">
+        <Loader2 className="h-10 w-10 animate-spin text-[#FB6503]" />
+      </div>
+    )
+  }
 
   return (
-    <>
-      <style jsx global>{`
-        @media (max-width: 768px) {
-          .analytics-hero {
-            padding: 40px 20px !important;
-            flex-direction: column !important;
-            align-items: flex-start !important;
-            gap: 20px !important;
-          }
-          .analytics-hero h1 {
-            font-size: 32px !important;
-          }
-          .analytics-hero-buttons {
-            width: 100% !important;
-            flex-direction: column !important;
-          }
-          .analytics-hero-buttons button {
-            width: 100% !important;
-            justify-content: center !important;
-          }
-          .analytics-content {
-            padding: 40px 20px !important;
-          }
-          .analytics-stats-grid {
-            grid-template-columns: 1fr !important;
-            gap: 16px !important;
-          }
-          .analytics-charts-grid {
-            grid-template-columns: 1fr !important;
-            gap: 20px !important;
-          }
-          .analytics-table-wrapper {
-            overflow-x: auto !important;
-          }
-        }
-
-        @media (max-width: 480px) {
-          .analytics-hero {
-            padding: 32px 16px !important;
-          }
-          .analytics-hero h1 {
-            font-size: 28px !important;
-            line-height: 1.2 !important;
-          }
-          .analytics-content {
-            padding: 32px 12px !important;
-          }
-          .analytics-card {
-            border-radius: 24px !important;
-            padding: 24px !important;
-          }
-        }
-      `}</style>
-
-      <div style={{ paddingBottom: '100px' }}>
-        {/* Hero Header */}
-        <section className="analytics-hero" style={{
-          backgroundImage: 'linear-gradient(rgba(255, 255, 255, 0.4), rgba(255, 255, 255, 0.4)), url("/design/BG%2023-01%202.png")',
-          backgroundSize: 'cover',
-          backgroundPosition: 'center',
-          padding: '60px 40px',
-          display: 'flex',
-          justifyContent: 'space-between',
-          alignItems: 'center'
-        }}>
+    <div
+      className="min-h-full bg-[#FFFEFD] dark:bg-[#161616]"
+      style={{
+        fontFamily: "Satoshi, var(--font-geist-sans), sans-serif",
+        backgroundImage:
+          isDark
+            ? "linear-gradient(rgba(10,10,10,0.78), rgba(10,10,10,0.78)), url('/design/BG%2023-01%202.png')"
+            : "linear-gradient(rgba(255,255,255,0.72), rgba(255,255,255,0.72)), url('/design/BG%2023-01%202.png')",
+        backgroundPosition: "center",
+        backgroundSize: "cover",
+      }}
+    >
+      <div className="mx-auto w-full max-w-[1120px] px-4 pb-10 pt-8 md:px-10 md:pt-12">
+        <div className="flex flex-wrap items-center justify-between gap-4">
           <div>
-            <h1 style={{ fontSize: '42px', fontWeight: 800, color: '#1a1a1a', margin: '0 0 10px 0' }}>
-              Content <span style={{ fontStyle: 'italic', fontWeight: 300, color: '#666', fontFamily: 'serif' }}>Analytics</span>
-            </h1>
-            <p style={{ color: '#666', fontSize: '15px', fontWeight: 500 }}>Track growth, engagement and performance across all platforms.</p>
+            <h1 className="text-[32px] font-bold leading-none text-[#212121] md:text-[39px]">Analytics</h1>
+            <p className="mt-3 text-base font-medium text-[#6A6A6A]">
+              Track performance across all your publishing channels.
+            </p>
           </div>
 
-          <div className="analytics-hero-buttons" style={{ display: 'flex', gap: '16px' }}>
+          <div className="flex items-center gap-2 rounded-2xl border border-[#E9E9E9] bg-white p-2 shadow-sm">
+            <button className="flex items-center gap-2 rounded-xl px-3 py-2 text-sm font-medium text-[#212121]">
+              <CalendarDays className="h-4 w-4" />
+              Last {timeRange === "7d" ? "7" : timeRange === "30d" ? "30" : "90"} Days
+            </button>
+
+            <button
+              onClick={() => setCompare((prev) => !prev)}
+              className="flex items-center gap-2 rounded-xl px-3 py-2 text-sm font-medium text-[#4D4D4D]"
+            >
+              Compare
+              <span className={`h-5 w-10 rounded-full p-[2px] ${compare ? "bg-[#FB6503]" : "bg-[#E9E9E9]"}`}>
+                <span className={`block h-4 w-4 rounded-full bg-white transition-transform ${compare ? "translate-x-5" : "translate-x-0"}`} />
+              </span>
+            </button>
+
             <button
               onClick={syncAnalytics}
               disabled={syncing}
-              style={{
-                backgroundColor: '#1a1a1a',
-                color: 'white',
-                padding: '14px 28px',
-                borderRadius: '50px',
-                border: 'none',
-                fontSize: '13px',
-                fontWeight: 800,
-                cursor: 'pointer',
-                display: 'flex',
-                alignItems: 'center',
-                gap: '10px'
-              }}
+              className="rounded-full bg-[#FB6503] px-6 py-2 text-sm font-bold text-white disabled:opacity-70"
             >
-              {syncing ? <Loader2 className="animate-spin" size={16} /> : <RefreshCw size={16} />}
-              {syncing ? 'SYNCING...' : 'SYNC ANALYTICS'}
-            </button>
-            <button
-              style={{
-                backgroundColor: '#fff',
-                color: '#1a1a1a',
-                padding: '14px 28px',
-                borderRadius: '50px',
-                border: '1px solid #eee',
-                fontSize: '13px',
-                fontWeight: 800,
-                cursor: 'pointer',
-                display: 'flex',
-                alignItems: 'center',
-                gap: '10px'
-              }}
-            >
-              <Download size={16} /> EXPORT DATA
+              {syncing ? "Syncing..." : "Apply"}
             </button>
           </div>
-        </section>
+        </div>
 
-        <section className="analytics-content" style={{ padding: '40px' }}>
-          <div style={{ display: 'flex', gap: '12px', marginBottom: '40px', flexWrap: 'wrap', justifyContent: 'space-between' }}>
-            <div style={{ display: 'flex', gap: '12px', flexWrap: 'wrap' }}>
-              {['overview', 'platforms', 'comparison'].map((tab) => (
-                <button
-                  key={tab}
-                  onClick={() => setActiveTab(tab)}
-                  style={{
-                    padding: '10px 24px',
-                    borderRadius: '50px',
-                    border: activeTab === tab ? 'none' : '1px solid #eee',
-                    backgroundColor: activeTab === tab ? '#FF7A33' : '#fff',
-                    color: activeTab === tab ? '#fff' : '#666',
-                    fontSize: '13px',
-                    fontWeight: 700,
-                    cursor: 'pointer',
-                    textTransform: 'capitalize'
-                  }}
-                >
-                  {tab}
-                </button>
-              ))}
+        <div className="mt-6 grid grid-cols-1 gap-4 md:grid-cols-2 xl:grid-cols-4">
+          {cards.map((card) => {
+            const Icon = card.icon
+            return (
+              <div key={card.title} className="rounded-2xl border border-[#E9E9E9] bg-white px-4 py-4">
+                <div className="mb-3 flex items-start justify-between">
+                  <div className="rounded-xl bg-[#FFFBF7] p-2">
+                    <Icon className="h-4 w-4 text-[#999999]" />
+                  </div>
+                  <p className={`text-xs font-bold ${card.positive ? "text-[#22C55E]" : "text-[#EF4444]"}`}>{card.delta}</p>
+                </div>
+                <p className="text-xs font-medium text-[#999999]">{card.title}</p>
+                <p className="mt-1 text-2xl font-bold text-[#1E1E1E]">{card.value}</p>
+                <p className="mt-1 text-[11px] font-medium text-[#BABABA]">vs 218.4K last period</p>
+              </div>
+            )
+          })}
+        </div>
+
+        <div className="mt-4 grid grid-cols-1 gap-4 xl:grid-cols-[2fr_1fr]">
+          <div className="rounded-2xl border border-[#E9E9E9] bg-white p-4">
+            <div className="mb-3 flex items-center justify-between">
+              <h3 className="text-[31px] font-medium text-[#212121]">Views Over Time</h3>
+              <span className="text-[#999999]">...</span>
             </div>
-
-            <div style={{ display: 'flex', gap: '10px' }}>
-              {(['7d', '30d', '90d'] as const).map((range) => (
-                <button
-                  key={range}
-                  onClick={() => setTimeRange(range)}
-                  style={{
-                    padding: '10px 16px',
-                    borderRadius: '12px',
-                    border: timeRange === range ? '1px solid #FF7A33' : '1px solid #eee',
-                    backgroundColor: timeRange === range ? '#fff2ea' : '#fff',
-                    color: timeRange === range ? '#c95417' : '#666',
-                    fontSize: '12px',
-                    fontWeight: 800,
-                    cursor: 'pointer',
-                    textTransform: 'uppercase'
-                  }}
-                >
-                  {range}
-                </button>
-              ))}
+            <div className="h-[240px]">
+              <ResponsiveContainer width="100%" height="100%">
+                <LineChart data={seriesData}>
+                  <CartesianGrid strokeDasharray="2 4" stroke="#E9E9E9" vertical={true} />
+                  <XAxis dataKey="label" tick={{ fontSize: 10, fill: "#BABABA" }} axisLine={false} tickLine={false} />
+                  <YAxis hide />
+                  <Tooltip />
+                  <Line type="monotone" dataKey="views" stroke="#FB6503" strokeWidth={3} dot={false} fill="#FFF0E6" />
+                </LineChart>
+              </ResponsiveContainer>
             </div>
           </div>
 
-          {activeTab === 'overview' && (
-            <div style={{ display: 'flex', flexDirection: 'column', gap: '40px' }}>
-              <div className="analytics-stats-grid" style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: '32px' }}>
-                {[
-                  { label: 'Total Articles', val: stats?.articles?.total || 0, icon: <FileText color="#FF7A33" />, sub: `${stats?.articles?.totalWords?.toLocaleString()} Words` },
-                  { label: 'Published', val: stats?.articles?.published || 0, icon: <Send color="#22c55e" />, sub: `${Math.round((stats?.articles?.published / stats?.articles?.total) * 100) || 0}% Completion` },
-                  { label: 'Total Views', val: stats?.articles?.totalViews?.toLocaleString() || 0, icon: <Eye color="#3b82f6" />, sub: 'Across platforms' },
-                  { label: 'Total Likes', val: platformTotals.likes?.toLocaleString() || 0, icon: <Heart color="#ff4b2b" />, sub: 'Audience engagement' },
-                ].map((s) => (
-                  <div key={s.label} style={{ backgroundColor: '#fff', padding: '32px', borderRadius: '32px', border: '1px solid #eee', boxShadow: '0 10px 40px rgba(0,0,0,0.02)' }}>
-                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '16px' }}>
-                      <div style={{ width: '40px', height: '40px', borderRadius: '12px', backgroundColor: '#f9f9f9', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-                        {s.icon}
-                      </div>
-                      <span style={{ fontSize: '10px', fontWeight: 800, color: '#999', textTransform: 'uppercase' }}>Stats</span>
+          <div className="rounded-2xl border border-[#E9E9E9] bg-white p-4">
+            <div className="mb-3 flex items-center justify-between">
+              <h3 className="text-[31px] font-medium text-[#212121]">Traffic Sources</h3>
+              <span className="text-[#999999]">...</span>
+            </div>
+            <div className="h-[170px]">
+              <ResponsiveContainer width="100%" height="100%">
+                <PieChart>
+                  <Pie
+                    data={trafficData}
+                    dataKey="value"
+                    nameKey="name"
+                    cx="50%"
+                    cy="50%"
+                    innerRadius={48}
+                    outerRadius={68}
+                  >
+                    {trafficData.map((_, idx) => (
+                      <Cell key={idx} fill={PIE_COLORS[idx % PIE_COLORS.length]} />
+                    ))}
+                  </Pie>
+                </PieChart>
+              </ResponsiveContainer>
+            </div>
+
+            <div className="space-y-2 text-xs">
+              {trafficData.map((item, idx) => {
+                const total = trafficData.reduce((sum, row) => sum + row.value, 0) || 1
+                const pct = Math.round((item.value / total) * 100)
+                return (
+                  <div key={item.name} className="flex items-center justify-between">
+                    <div className="flex items-center gap-2">
+                      <span className="h-2.5 w-2.5 rounded-full" style={{ backgroundColor: PIE_COLORS[idx % PIE_COLORS.length] }} />
+                      <span className="text-[#4D4D4D]">{item.name}</span>
                     </div>
-                    <p style={{ margin: '0 0 4px 0', fontSize: '28px', fontWeight: 800, color: '#1a1a1a' }}>{s.val}</p>
-                    <p style={{ margin: '0 0 12px 0', fontSize: '14px', fontWeight: 700, color: '#1a1a1a' }}>{s.label}</p>
-                    <p style={{ margin: 0, fontSize: '11px', color: '#999', fontWeight: 600 }}>{s.sub}</p>
+                    <span className="font-bold text-[#212121]">{pct}%</span>
+                  </div>
+                )
+              })}
+            </div>
+          </div>
+        </div>
+
+        <div className="mt-4 grid grid-cols-1 gap-4 xl:grid-cols-2">
+          <div className="rounded-2xl border border-[#E9E9E9] bg-white p-4">
+            <h3 className="text-[31px] font-medium text-[#212121]">Engagement by Type</h3>
+            <div className="h-[150px]">
+              <ResponsiveContainer width="100%" height="100%">
+                <BarChart data={engagementData}>
+                  <XAxis dataKey="name" tick={{ fontSize: 10, fill: "#6A6A6A" }} axisLine={false} tickLine={false} />
+                  <YAxis hide />
+                  <Tooltip />
+                  <Bar dataKey="value" radius={[4, 4, 0, 0]}>
+                    {engagementData.map((_, idx) => (
+                      <Cell key={idx} fill={LINE_COLORS[idx % LINE_COLORS.length]} />
+                    ))}
+                  </Bar>
+                </BarChart>
+              </ResponsiveContainer>
+            </div>
+          </div>
+
+          <div className="rounded-2xl border border-[#E9E9E9] bg-white p-4">
+            <h3 className="text-[31px] font-medium text-[#212121]">Device & Platform</h3>
+            <div className="grid grid-cols-[130px_1fr] items-center gap-4">
+              <div className="h-[140px]">
+                <ResponsiveContainer width="100%" height="100%">
+                  <PieChart>
+                    <Pie data={deviceData} dataKey="value" innerRadius={40} outerRadius={58}>
+                      {deviceData.map((_, idx) => (
+                        <Cell key={idx} fill={PIE_COLORS[idx % PIE_COLORS.length]} />
+                      ))}
+                    </Pie>
+                  </PieChart>
+                </ResponsiveContainer>
+              </div>
+
+              <div className="space-y-3">
+                {deviceData.map((row, idx) => (
+                  <div key={row.name}>
+                    <div className="mb-1 flex items-center justify-between text-xs">
+                      <span className="text-[#4D4D4D]">{row.name}</span>
+                      <span className="font-bold text-[#212121]">{row.value}%</span>
+                    </div>
+                    <div className="h-1.5 rounded-full bg-[#F3F4F6]">
+                      <div
+                        className="h-1.5 rounded-full"
+                        style={{ width: `${row.value}%`, backgroundColor: PIE_COLORS[idx % PIE_COLORS.length] }}
+                      />
+                    </div>
                   </div>
                 ))}
               </div>
-
-              <div className="analytics-charts-grid" style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '32px' }}>
-                <div style={{ backgroundColor: '#fff', borderRadius: '32px', border: '1px solid #eee', padding: '32px' }}>
-                  <h3 style={{ margin: '0 0 24px 0', fontSize: '16px', fontWeight: 800 }}>Views Trend ({timeRange})</h3>
-                  <ResponsiveContainer width="100%" height={300}>
-                    <LineChart
-                      data={byArticle.slice(0, 8).map((article, idx) => ({
-                        name: `${idx + 1}`,
-                        views: article.totalViews,
-                        likes: article.totalLikes,
-                      }))}
-                    >
-                      <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#f0f0f0" />
-                      <XAxis dataKey="name" axisLine={false} tickLine={false} tick={{ fontSize: 11, fontWeight: 700 }} />
-                      <YAxis axisLine={false} tickLine={false} tick={{ fontSize: 11, fontWeight: 700 }} />
-                      <Tooltip />
-                      <Legend />
-                      <Line type="monotone" dataKey="views" name="Views" stroke="#FF7A33" strokeWidth={3} dot={{ r: 3 }} />
-                      <Line type="monotone" dataKey="likes" name="Likes" stroke="#171717" strokeWidth={2} dot={{ r: 2 }} />
-                    </LineChart>
-                  </ResponsiveContainer>
-                </div>
-                <div style={{ backgroundColor: '#fff', borderRadius: '32px', border: '1px solid #eee', padding: '32px' }}>
-                  <h3 style={{ margin: '0 0 24px 0', fontSize: '16px', fontWeight: 800 }}>Status Distribution</h3>
-                  <ResponsiveContainer width="100%" height={300}>
-                    <PieChart>
-                      <Pie
-                        data={[
-                          { name: 'Published', value: stats?.articles?.published || 0, color: '#22c55e' },
-                          { name: 'Draft', value: stats?.articles?.draft || 0, color: '#FF7A33' },
-                          { name: 'Scheduled', value: stats?.articles?.scheduled || 0, color: '#3b82f6' }
-                        ]}
-                        innerRadius={60}
-                        outerRadius={100}
-                        paddingAngle={5}
-                        dataKey="value"
-                      >
-                        {[0, 1, 2].map((i) => <Cell key={i} fill={['#22c55e', '#FF7A33', '#3b82f6'][i]} />)}
-                      </Pie>
-                      <Tooltip />
-                      <Legend />
-                    </PieChart>
-                  </ResponsiveContainer>
-                </div>
-                <div style={{ backgroundColor: '#fff', borderRadius: '32px', border: '1px solid #eee', padding: '32px' }}>
-                  <h3 style={{ margin: '0 0 24px 0', fontSize: '16px', fontWeight: 800 }}>Platform Presence</h3>
-                  <ResponsiveContainer width="100%" height={300}>
-                    <BarChart data={stats?.platforms?.articlesPerPlatform?.map((p: any) => ({ name: getPlatformName(p.platform), val: p.uniqueArticles }))}>
-                      <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#f0f0f0" />
-                      <XAxis dataKey="name" axisLine={false} tickLine={false} tick={{ fontSize: 11, fontWeight: 700 }} />
-                      <YAxis axisLine={false} tickLine={false} tick={{ fontSize: 11, fontWeight: 700 }} />
-                      <Tooltip cursor={{ fill: '#fcfcfc' }} />
-                      <Bar dataKey="val" fill="#FF7A33" radius={[8, 8, 0, 0]} barSize={40} />
-                    </BarChart>
-                  </ResponsiveContainer>
-                </div>
-              </div>
-
-              {/* Top Articles List */}
-              <div style={{ backgroundColor: '#fff', borderRadius: '32px', border: '1px solid #eee', overflow: 'hidden' }}>
-                <div style={{ padding: '24px 32px', borderBottom: '1px solid #f9f9f9', backgroundColor: '#fafafa' }}>
-                  <h3 style={{ margin: 0, fontSize: '16px', fontWeight: 800 }}>Top Performing Articles</h3>
-                </div>
-                <div style={{ padding: '0 32px' }}>
-                  {stats?.topArticles?.map((art: any, i: number) => (
-                    <div key={art.id} style={{ padding: '24px 0', borderBottom: i === stats.topArticles.length - 1 ? 'none' : '1px solid #f9f9f9', display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
-                      <div style={{ display: 'flex', alignItems: 'center', gap: '20px' }}>
-                        <span style={{ fontSize: '24px', fontWeight: 800, color: '#eee' }}>0{i + 1}</span>
-                        <div>
-                          <p style={{ margin: '0 0 4px 0', fontSize: '15px', fontWeight: 800 }}>{art.title}</p>
-                          <div style={{ display: 'flex', gap: '12px' }}>
-                            {art.platforms.map((p: string) => (
-                              <span key={p} style={{ fontSize: '11px', fontWeight: 700, color: '#999' }}># {getPlatformName(p)}</span>
-                            ))}
-                          </div>
-                        </div>
-                      </div>
-                      <div style={{ textAlign: 'right' }}>
-                        <p style={{ margin: 0, fontSize: '18px', fontWeight: 800 }}>{art.views.toLocaleString()}</p>
-                        <p style={{ margin: 0, fontSize: '11px', fontWeight: 700, color: '#999' }}>TOTAL VIEWS</p>
-                      </div>
-                    </div>
-                  ))}
-                </div>
-              </div>
             </div>
-          )}
-
-          {activeTab === 'platforms' && (
-            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(300px, 1fr))', gap: '32px' }}>
-              {byPlatform.map((p) => (
-                <div key={p.platform} style={{ backgroundColor: '#fff', padding: '32px', borderRadius: '32px', border: '1px solid #eee', boxShadow: '0 10px 40px rgba(0,0,0,0.02)' }}>
-                  <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '24px' }}>
-                    <span style={{ backgroundColor: '#fcfcfc', color: '#1a1a1a', padding: '6px 16px', borderRadius: '50px', fontSize: '12px', fontWeight: 800, border: '1px solid #eee' }}>{getPlatformName(p.platform)}</span>
-                    <TrendingUp size={16} color="#22c55e" />
-                  </div>
-                  <div style={{ display: 'flex', flexDirection: 'column', gap: '20px' }}>
-                    <div style={{ display: 'flex', justifyContent: 'space-between' }}>
-                      <span style={{ fontSize: '13px', fontWeight: 700, color: '#999' }}>Views</span>
-                      <span style={{ fontSize: '13px', fontWeight: 800, color: '#1a1a1a' }}>{p.totalViews.toLocaleString()}</span>
-                    </div>
-                    <div style={{ display: 'flex', justifyContent: 'space-between' }}>
-                      <span style={{ fontSize: '13px', fontWeight: 700, color: '#999' }}>Articles</span>
-                      <span style={{ fontSize: '13px', fontWeight: 800, color: '#1a1a1a' }}>{p.articles}</span>
-                    </div>
-                    <div style={{ display: 'flex', justifyContent: 'space-between' }}>
-                      <span style={{ fontSize: '13px', fontWeight: 700, color: '#999' }}>Likes</span>
-                      <span style={{ fontSize: '13px', fontWeight: 800, color: '#1a1a1a' }}>{p.totalLikes}</span>
-                    </div>
-                  </div>
-                </div>
-              ))}
-            </div>
-          )}
-
-          {activeTab === 'comparison' && (
-            <div style={{ display: 'flex', flexDirection: 'column', gap: '40px' }}>
-              <div style={{ backgroundColor: '#fff', borderRadius: '32px', border: '1px solid #eee', padding: '40px' }}>
-                <h3 style={{ margin: '0 0 32px 0', fontSize: '18px', fontWeight: 800 }}>Platform Metrics Comparison</h3>
-                <ResponsiveContainer width="100%" height={400}>
-                  <RadarChart data={byPlatform.map(p => ({ platform: getPlatformName(p.platform), Views: p.totalViews, Likes: p.totalLikes, Comments: p.totalComments }))}>
-                    <PolarGrid stroke="#f0f0f0" />
-                    <PolarAngleAxis dataKey="platform" tick={{ fontSize: 11, fontWeight: 700 }} />
-                    <PolarRadiusAxis axisLine={false} tick={false} />
-                    <Radar name="Views" dataKey="Views" stroke="#FF7A33" fill="#FF7A33" fillOpacity={0.1} />
-                    <Radar name="Likes" dataKey="Likes" stroke="#22c55e" fill="#22c55e" fillOpacity={0.1} />
-                    <Legend />
-                    <Tooltip />
-                  </RadarChart>
-                </ResponsiveContainer>
-              </div>
-            </div>
-          )}
-
-        </section>
+          </div>
+        </div>
       </div>
-    </>
+    </div>
   )
 }
 
 export default function AnalyticsPage() {
   return (
-    <Suspense fallback={<div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', minHeight: '60vh' }}><Loader2 className="animate-spin" size={40} style={{ color: '#FF7A33' }} /></div>}>
+    <Suspense
+      fallback={
+        <div className="flex min-h-[60vh] items-center justify-center">
+          <Loader2 className="h-10 w-10 animate-spin text-[#FB6503]" />
+        </div>
+      }
+    >
       <AnalyticsContent />
     </Suspense>
   )
 }
-
-

@@ -151,9 +151,15 @@ const MenuBar = ({ editor }: MenuBarProps) => {
     try {
       const formData = new FormData()
       formData.append('file', uploadedFile)
+      const token = localStorage.getItem('accessToken')
 
       const response = await fetch('/api/images/upload', {
         method: 'POST',
+        headers: token
+          ? {
+              Authorization: `Bearer ${token}`,
+            }
+          : undefined,
         body: formData,
       })
 

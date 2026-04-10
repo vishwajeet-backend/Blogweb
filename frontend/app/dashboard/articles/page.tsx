@@ -1,24 +1,14 @@
 "use client"
 
-import { useEffect, useState } from "react"
+import { useEffect, useMemo, useState } from "react"
+import Link from "next/link"
 import { useRouter } from "next/navigation"
 import { useAuth } from "@/lib/context/AuthContext"
-import {
-  Search,
-  Plus,
-  FileText,
-  Clock,
-  Eye,
-  Edit,
-  Trash2,
-  Calendar,
-  ChevronRight,
-  Loader2
-} from "lucide-react"
+import { useTheme } from "@/lib/context/ThemeContext"
+import { Loader2, MoreHorizontal, Plus, Search, Trash2 } from "lucide-react"
 import { toast } from "sonner"
-import Link from "next/link"
 
-interface Article {
+type Article = {
   id: string
   title: string
   slug: string
@@ -31,27 +21,51 @@ interface Article {
   scheduleAt: string | null
   createdAt: string
   updatedAt: string
-  publishRecords?: {
+  publishRecords?: Array<{
     platform: string
     url: string | null
-  }[]
+  }>
+}
+
+const FILTERS = ["all", "published", "draft", "scheduled"] as const
+
+function formatDate(dateString: string) {
+  return new Date(dateString).toLocaleDateString("en-US", {
+    month: "short",
+    day: "numeric",
+    year: "numeric",
+  })
+}
+
+function platformDisplay(platform: string) {
+  const names: Record<string, string> = {
+    WORDPRESS: "Wordpress",
+    GHOST: "Ghost",
+    DEVTO: "Dev.to",
+    HASHNODE: "Hashnode",
+    WIX: "Wix",
+    MEDIUM: "Medium",
+    LINKEDIN: "LinkedIn",
+    TWITTER: "Twitter / X",
+  }
+  return names[platform] || platform
 }
 
 export default function ArticlesPage() {
   const { user, loading: authLoading } = useAuth()
+  const { isDark } = useTheme()
   const router = useRouter()
+
   const [articles, setArticles] = useState<Article[]>([])
   const [loading, setLoading] = useState(true)
   const [searchQuery, setSearchQuery] = useState("")
   const [filterStatus, setFilterStatus] = useState<string>("all")
-  const [totalArticles, setTotalArticles] = useState(0)
-  const [totalWords, setTotalWords] = useState(0)
 
   useEffect(() => {
     if (!authLoading && !user) {
-      router.push("/login")
+      router.replace("/login")
     }
-  }, [user, authLoading, router])
+  }, [authLoading, user, router])
 
   useEffect(() => {
     if (user) {
@@ -59,35 +73,33 @@ export default function ArticlesPage() {
     }
   }, [user, filterStatus])
 
-  const fetchArticles = async () => {
+  async function fetchArticles() {
     try {
       setLoading(true)
       const token = localStorage.getItem("accessToken")
-      const params = new URLSearchParams({ limit: '50' })
-      if (filterStatus !== 'all') params.append('status', filterStatus.toUpperCase())
+      const params = new URLSearchParams({ limit: "100" })
+      if (filterStatus !== "all") {
+        params.append("status", filterStatus.toUpperCase())
+      }
 
-      const response = await fetch(`/api/articles?${params}`, {
+      const response = await fetch(`/api/articles?${params.toString()}`, {
         headers: { Authorization: `Bearer ${token}` },
       })
       const data = await response.json()
-      if (data.success) {
-        const fetched = data.data.articles || []
-        setArticles(fetched)
-        setTotalArticles(data.data.pagination.total)
 
-        // RESTORING: Calculate total words dynamically
-        const words = fetched.reduce((sum: number, article: Article) => sum + (article.wordCount || 0), 0)
-        setTotalWords(words)
+      if (data.success) {
+        setArticles(data.data.articles || [])
       }
     } catch (error) {
       console.error("Error fetching articles:", error)
+      toast.error("Failed to fetch articles")
     } finally {
       setLoading(false)
     }
   }
 
-  const handleDelete = async (articleId: string, articleTitle: string) => {
-    if (!confirm(`Are you sure you want to delete "${articleTitle}"?`)) return
+  async function handleDelete(articleId: string, articleTitle: string) {
+    if (!confirm(`Are you sure you want to delete \"${articleTitle}\"?`)) return
 
     try {
       const token = localStorage.getItem("accessToken")
@@ -96,316 +108,237 @@ export default function ArticlesPage() {
         headers: { Authorization: `Bearer ${token}` },
       })
       const data = await response.json()
+
       if (data.success) {
         toast.success("Article deleted successfully")
         setArticles((prev) => prev.filter((article) => article.id !== articleId))
-        setTotalArticles(prev => prev - 1)
+      } else {
+        toast.error(data.error || "Failed to delete article")
       }
-    } catch (error) {
+    } catch (_error) {
       toast.error("Failed to delete article")
     }
   }
 
-  const filteredArticles = articles.filter((article) =>
-    article.title.toLowerCase().includes(searchQuery.toLowerCase())
-  )
+  const filteredArticles = useMemo(() => {
+    return articles.filter((article) => article.title.toLowerCase().includes(searchQuery.toLowerCase()))
+  }, [articles, searchQuery])
 
-  const formatDate = (dateString: string) => {
-    const date = new Date(dateString)
-    return date.toLocaleDateString("en-US", { month: "short", day: "numeric", year: "numeric" })
-  }
+  const stats = useMemo(() => {
+    const total = filteredArticles.length
+    const published = filteredArticles.filter((item) => item.status === "PUBLISHED").length
+    const drafts = filteredArticles.filter((item) => item.status === "DRAFT").length
+    const totalViews = filteredArticles.reduce((sum, item) => sum + (item.views || 0), 0)
 
-  const getPlatformName = (platform: string) => {
-    const names: Record<string, string> = {
-      'WORDPRESS': 'WordPress', 'GHOST': 'Ghost', 'DEVTO': 'Dev.to',
-      'HASHNODE': 'Hashnode', 'WIX': 'Wix', 'MEDIUM': 'Medium', 'LINKEDIN': 'LinkedIn'
-    }
-    return names[platform] || platform
-  }
+    return { total, published, drafts, totalViews }
+  }, [filteredArticles])
+
+  const queueCount = useMemo(() => filteredArticles.filter((item) => item.status === "SCHEDULED").length, [filteredArticles])
 
   if (authLoading || loading) {
     return (
-      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', minHeight: '60vh' }}>
-        <Loader2 className="animate-spin" size={40} style={{ color: '#FF7A33' }} />
+      <div className="flex min-h-[60vh] items-center justify-center">
+        <Loader2 className="h-10 w-10 animate-spin text-[#FB6503]" />
       </div>
     )
   }
 
   return (
-    <>
-      <style jsx global>{`
-        /* Tablet and below */
-        @media (max-width: 1024px) {
-          .articles-grid {
-            grid-template-columns: repeat(auto-fill, minwidth(300px, 1fr)) !important;
-          }
-        }
-
-        /* Mobile landscape and below */
-        @media (max-width: 768px) {
-          .articles-hero {
-            padding: 40px 20px !important;
-            flex-direction: column !important;
-            align-items: flex-start !important;
-            gap: 20px !important;
-          }
-          .articles-hero h1 {
-            font-size: 32px !important;
-          }
-          .articles-hero button {
-            width: 100% !important;
-            justify-content: center !important;
-          }
-          .articles-filters-section {
-            padding: 24px 20px !important;
-          }
-          .articles-filters-row {
-            flex-direction: column !important;
-            gap: 16px !important;
-          }
-          .articles-search {
-            width: 100% !important;
-          }
-          .articles-filter-buttons {
-            width: 100% !important;
-            overflow-x: auto !important;
-            flex-wrap: nowrap !important;
-          }
-          .articles-grid {
-            grid-template-columns: 1fr !important;
-            gap: 20px !important;
-          }
-        }
-
-        /* Mobile portrait */
-        @media (max-width: 480px) {
-          .articles-hero {
-            padding: 32px 16px !important;
-          }
-          .articles-hero h1 {
-            font-size: 28px !important;
-            line-height: 1.2 !important;
-          }
-          .articles-hero p {
-            font-size: 14px !important;
-          }
-          .articles-filters-section {
-            padding: 20px 12px !important;
-          }
-          .articles-card {
-            border-radius: 24px !important;
-          }
-          .articles-card-inner {
-            padding: 24px !important;
-          }
-        }
-      `}</style>
-
-      <div style={{ paddingBottom: '100px' }}>
-        {/* Hero Header */}
-        <section className="articles-hero" style={{
-          backgroundImage: 'linear-gradient(rgba(255, 255, 255, 0.4), rgba(255, 255, 255, 0.4)), url("/design/BG%2023-01%202.png")',
-          backgroundSize: 'cover',
-          backgroundPosition: 'center',
-          padding: '60px 40px',
-          display: 'flex',
-          justifyContent: 'space-between',
-          alignItems: 'center'
-        }}>
+    <div
+      className="min-h-full bg-[#FFFEFD] dark:bg-[#161616]"
+      style={{
+        fontFamily: "Satoshi, var(--font-geist-sans), sans-serif",
+        backgroundImage:
+          isDark
+            ? "linear-gradient(rgba(10,10,10,0.78), rgba(10,10,10,0.78)), url('/design/BG%2023-01%202.png')"
+            : "linear-gradient(rgba(255,255,255,0.72), rgba(255,255,255,0.72)), url('/design/BG%2023-01%202.png')",
+        backgroundPosition: "center",
+        backgroundSize: "cover",
+      }}
+    >
+      <div className="mx-auto w-full max-w-[1120px] px-4 pb-10 pt-8 md:px-10 md:pt-12">
+        <div className="flex flex-wrap items-start justify-between gap-5">
           <div>
-            <h1 style={{ fontSize: '42px', fontWeight: 800, color: '#1a1a1a', margin: '0 0 10px 0' }}>
-              All <span style={{ fontStyle: 'italic', fontWeight: 300, color: '#666', fontFamily: 'serif' }}>Articles</span>
+            <h1 className="text-[32px] font-bold leading-none text-[#212121] md:text-[39px]">
+              Articles,
+              <span className="ml-2 italic text-[#6A6A6A]">Workspace</span>
             </h1>
-            <p style={{ color: '#666', fontSize: '15px', fontWeight: 500 }}>Manage, edit and publish your stories from one place.</p>
+            <p className="mt-3 text-base font-medium text-[#6A6A6A]">Manage, refine, and publish all your stories in one place.</p>
+          </div>
+
+          <div className="flex gap-4">
+            <div className="w-[148px] rounded-[20px] border border-[#E9E9E9] bg-white p-4 text-center">
+              <p className="text-sm font-medium text-[#212121]">TOTAL</p>
+              <p className="mt-1 text-2xl font-bold text-[#1E1E1E]">{stats.total}</p>
+            </div>
+            <div className="w-[148px] rounded-[20px] border border-[#E9E9E9] bg-white p-4 text-center">
+              <p className="text-sm font-medium text-[#212121]">PUBLISHED</p>
+              <p className="mt-1 text-2xl font-bold text-[#1E1E1E]">{stats.published}</p>
+            </div>
+          </div>
+        </div>
+
+        <div className="mt-8 flex flex-wrap items-center justify-between gap-4 rounded-2xl border border-[#E9E9E9] bg-white/80 px-4 py-3 backdrop-blur">
+          <div className="flex w-full max-w-[420px] items-center gap-2 rounded-[28px] border border-[#E45C03] px-2.5 py-2 shadow-[0_2px_2px_0_#FECFB1]">
+            <Search className="h-[18px] w-[18px] text-[#999999]" />
+            <input
+              value={searchQuery}
+              onChange={(e) => setSearchQuery(e.target.value)}
+              placeholder="Search articles"
+              className="w-full bg-transparent text-base font-medium text-[#212121] placeholder:text-[#999999] outline-none"
+            />
+          </div>
+
+          <div className="flex gap-2 overflow-x-auto">
+            {FILTERS.map((status) => (
+              <button
+                key={status}
+                onClick={() => setFilterStatus(status)}
+                className={`rounded-[20px] px-4 py-2 text-sm font-bold capitalize ${
+                  filterStatus === status
+                    ? "bg-[#212121] text-white"
+                    : "border border-[#E9E9E9] bg-[#FFFAF3] text-[#4D4D4D]"
+                }`}
+              >
+                {status}
+              </button>
+            ))}
           </div>
 
           <button
             onClick={() => router.push("/dashboard/articles/new")}
-            style={{
-              backgroundColor: '#FF7A33',
-              color: 'white',
-              padding: '16px 32px',
-              borderRadius: '50px',
-              border: 'none',
-              fontSize: '15px',
-              fontWeight: 800,
-              cursor: 'pointer',
-              display: 'flex',
-              alignItems: 'center',
-              gap: '10px',
-              boxShadow: '0 8px 25px rgba(255, 122, 51, 0.3)'
-            }}
+            className="flex items-center gap-2 rounded-[26px] bg-[#FB6503] px-4 py-2.5 text-sm font-bold text-[#FFFEFD]"
           >
-            <Plus size={20} strokeWidth={3} />
-            Create New Article
+            <Plus className="h-4 w-4" />
+            NEW ARTICLE
           </button>
-        </section>
+        </div>
 
-        {/* Filters & Search */}
-        <section className="articles-filters-section" style={{ padding: '40px' }}>
-          <div className="articles-filters-row" style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '40px' }}>
-            <div className="articles-search" style={{ position: 'relative', width: '400px' }}>
-              <input
-                type="text"
-                placeholder="Search by article title..."
-                value={searchQuery}
-                onChange={(e) => setSearchQuery(e.target.value)}
-                style={{
-                  width: '100%',
-                  padding: '14px 20px 14px 48px',
-                  borderRadius: '50px',
-                  border: '1px solid #eee',
-                  backgroundColor: '#fcfcfc',
-                  fontSize: '14px',
-                  outline: 'none'
-                }}
-              />
-              <Search style={{ position: 'absolute', left: '18px', top: '50%', transform: 'translateY(-50%)', color: '#999' }} size={18} />
+        <div className="mt-6 grid grid-cols-1 gap-6 xl:grid-cols-[1.9fr_1fr]">
+          <div className="overflow-hidden rounded-2xl border border-[#E9E9E9] bg-white">
+            <div className="flex items-center justify-between border-b border-[#E9E9E9] bg-[#FFFAF3] px-3 py-3">
+              <p className="text-base font-bold text-[#1E1E1E]">All Articles</p>
+              <p className="text-[13px] font-bold text-[#4D4D4D]">{filteredArticles.length} ITEMS</p>
             </div>
 
-            <div className="articles-filter-buttons" style={{ display: 'flex', gap: '12px' }}>
-              {['all', 'published', 'draft', 'scheduled'].map((status) => (
-                <button
-                  key={status}
-                  onClick={() => setFilterStatus(status)}
-                  style={{
-                    padding: '10px 24px',
-                    borderRadius: '50px',
-                    border: filterStatus === status ? 'none' : '1px solid #eee',
-                    backgroundColor: filterStatus === status ? '#1a1a1a' : '#fff',
-                    color: filterStatus === status ? '#fff' : '#666',
-                    fontSize: '13px',
-                    fontWeight: 700,
-                    cursor: 'pointer',
-                    textTransform: 'capitalize'
-                  }}
-                >
-                  {status}
-                </button>
-              ))}
-            </div>
-          </div>
+            <div className="overflow-x-auto">
+              <div className="min-w-[760px]">
+                <div className="grid grid-cols-[1.6fr_0.9fr_1.2fr_0.9fr_0.6fr] bg-[#FFFAF3] px-3 py-2 text-base font-bold text-[#1E1E1E]">
+                  <p>TITLE</p>
+                  <p>STATUS</p>
+                  <p>PLATFORM</p>
+                  <p>DATE</p>
+                  <p>ACTION</p>
+                </div>
 
-          {/* Articles Grid */}
-          <div className="articles-grid" style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(400px, 1fr))', gap: '32px' }}>
-            {filteredArticles.map((article) => (
-              <div key={article.id} className="articles-card" style={{
-                backgroundColor: '#fff',
-                borderRadius: '32px',
-                border: '1px solid #eee',
-                overflow: 'hidden',
-                boxShadow: '0 10px 40px rgba(0,0,0,0.02)',
-                position: 'relative'
-              }}>
-                <div className="articles-card-inner" style={{ padding: '32px' }}>
-                  <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: '20px' }}>
-                    <span style={{
-                      backgroundColor: article.status === 'PUBLISHED' ? '#e7f9ee' : '#f9f9f9',
-                      color: article.status === 'PUBLISHED' ? '#22c55e' : '#999',
-                      padding: '4px 12px',
-                      borderRadius: '50px',
-                      fontSize: '11px',
-                      fontWeight: 800,
-                      textTransform: 'uppercase'
-                    }}>{article.status}</span>
+                {filteredArticles.map((article) => (
+                  <div key={article.id} className="grid grid-cols-[1.6fr_0.9fr_1.2fr_0.9fr_0.6fr] items-center px-3 py-5">
+                    <Link href={`/dashboard/articles/${article.id}`} className="max-w-[220px] text-[13px] leading-[1.2] text-[#2D3648] hover:text-[#FB6503]">
+                      {article.title}
+                    </Link>
 
-                    <div style={{ display: 'flex', gap: '8px' }}>
+                    <span
+                      className={`w-fit rounded-2xl px-2.5 py-1 text-xs ${
+                        article.status === "PUBLISHED"
+                          ? "bg-[#DCFCE7] text-[#166534]"
+                          : article.status === "SCHEDULED"
+                          ? "bg-[#FEF3C7] text-[#92400E]"
+                          : "bg-[#F4F4F5] text-[#52525B]"
+                      }`}
+                    >
+                      {article.status === "PUBLISHED" ? "Published" : article.status}
+                    </span>
+
+                    <p className="text-[13px] text-[#52525B]">
+                      {(article.publishRecords || []).length > 0
+                        ? (article.publishRecords || [])
+                            .slice(0, 2)
+                            .map((rec) => platformDisplay(rec.platform))
+                            .join(", ")
+                        : "-"}
+                    </p>
+
+                    <p className="text-[13px] text-[#52525B]">{formatDate(article.publishedAt || article.createdAt)}</p>
+
+                    <div className="flex items-center gap-1">
                       <button
                         onClick={() => router.push(`/dashboard/articles/${article.id}`)}
-                        style={{ width: '36px', height: '36px', borderRadius: '50%', border: '1px solid #eee', backgroundColor: '#fff', display: 'flex', alignItems: 'center', justifyContent: 'center', cursor: 'pointer', color: '#666' }}>
-                        <Edit size={16} />
+                        className="rounded-lg p-1.5 text-[#9CA3AF] hover:bg-[#FFFAF3] hover:text-[#FB6503]"
+                        title="Open"
+                      >
+                        <MoreHorizontal className="h-4 w-4" />
                       </button>
                       <button
                         onClick={() => handleDelete(article.id, article.title)}
-                        style={{ width: '36px', height: '36px', borderRadius: '50%', border: '1px solid #eee', backgroundColor: '#fff', display: 'flex', alignItems: 'center', justifyContent: 'center', cursor: 'pointer', color: '#ff4b2b' }}>
-                        <Trash2 size={16} />
+                        className="rounded-lg p-1.5 text-[#9CA3AF] hover:bg-[#FFF0E6] hover:text-[#E45C03]"
+                        title="Delete"
+                      >
+                        <Trash2 className="h-4 w-4" />
                       </button>
                     </div>
                   </div>
+                ))}
 
-                  <h3 style={{ fontSize: '20px', fontWeight: 800, color: '#1a1a1a', margin: '0 0 12px 0', lineHeight: '1.4' }}>{article.title}</h3>
-                  <p style={{ color: '#666', fontSize: '14px', lineHeight: '1.6', marginBottom: '24px', display: '-webkit-box', WebkitLineClamp: '2', WebkitBoxOrient: 'vertical', overflow: 'hidden' }}>
-                    {article.excerpt || "No excerpt provided for this account."}
-                  </p>
-
-                  {/* RESTORING: Published Platforms visibility */}
-                  {article.publishRecords && article.publishRecords.length > 0 && (
-                    <div style={{ marginBottom: '24px' }}>
-                      <p style={{ margin: '0 0 8px 0', fontSize: '11px', fontWeight: 800, color: '#999' }}>PUBLISHED ON:</p>
-                      <div style={{ display: 'flex', flexWrap: 'wrap', gap: '8px' }}>
-                        {article.publishRecords.map((rec, i) => (
-                          <a key={i} href={rec.url || '#'} target="_blank" rel="noreferrer" style={{
-                            backgroundColor: '#f5f5f5', color: '#1a1a1a', fontSize: '10px', fontWeight: 700, padding: '4px 10px', borderRadius: '4px', textDecoration: 'none'
-                          }}>
-                            {getPlatformName(rec.platform)}
-                          </a>
-                        ))}
-                      </div>
-                    </div>
-                  )}
-
-                  <div style={{ display: 'flex', alignItems: 'center', gap: '20px', padding: '20px 0', borderTop: '1px solid #f9f9f9' }}>
-                    <div style={{ display: 'flex', alignItems: 'center', gap: '6px', fontSize: '12px', color: '#999', fontWeight: 700 }}>
-                      <FileText size={14} /> {article.wordCount} Words
-                    </div>
-                    <div style={{ display: 'flex', alignItems: 'center', gap: '6px', fontSize: '12px', color: '#999', fontWeight: 700 }}>
-                      <Clock size={14} /> {article.readingTime} Min
-                    </div>
-                    <div style={{ display: 'flex', alignItems: 'center', gap: '6px', fontSize: '12px', color: '#999', fontWeight: 700 }}>
-                      <Calendar size={14} /> {formatDate(article.publishedAt || article.createdAt)}
-                    </div>
-                  </div>
-
-                  <Link href={`/dashboard/articles/${article.id}`} style={{
-                    marginTop: '10px',
-                    display: 'flex',
-                    alignItems: 'center',
-                    gap: '8px',
-                    color: '#FF7A33',
-                    textDecoration: 'none',
-                    fontSize: '14px',
-                    fontWeight: 800
-                  }}>
-                    Continue Editing <ChevronRight size={16} />
-                  </Link>
-                </div>
+                {filteredArticles.length === 0 && (
+                  <div className="px-3 py-10 text-[13px] text-[#6A6A6A]">No stories found. Try another filter or create a new article.</div>
+                )}
               </div>
-            ))}
+            </div>
           </div>
 
-          {/* RESTORING: Dynamic Stats Footer from original */}
-          {filteredArticles.length > 0 && (
-            <div style={{
-              marginTop: '80px',
-              backgroundColor: '#1a1a1a',
-              borderRadius: '32px',
-              padding: '40px',
-              display: 'flex',
-              justifyContent: 'center',
-              gap: '80px',
-              color: 'white'
-            }}>
-              <div style={{ textAlign: 'center' }}>
-                <p style={{ margin: 0, fontSize: '32px', fontWeight: 800 }}>{totalArticles}</p>
-                <p style={{ margin: 0, fontSize: '12px', fontWeight: 700, opacity: 0.6, textTransform: 'uppercase' }}>Total Articles</p>
-              </div>
-              <div style={{ width: '1px', height: '50px', backgroundColor: '#333' }}></div>
-              <div style={{ textAlign: 'center' }}>
-                <p style={{ margin: 0, fontSize: '32px', fontWeight: 800 }}>{totalWords.toLocaleString()}</p>
-                <p style={{ margin: 0, fontSize: '12px', fontWeight: 700, opacity: 0.6, textTransform: 'uppercase' }}>Total Words Written</p>
+          <div className="space-y-5">
+            <div className="rounded-[10px] border border-[#E4E4E7] bg-white px-6 py-6">
+              <h3 className="text-[20px] font-bold text-[#2D3648]">Publishing Queue</h3>
+              <div className="mt-4 space-y-3 text-[13px]">
+                <div className="flex items-center justify-between border-b border-[#F4F4F5] pb-2">
+                  <p className="font-bold text-[#2D3648]">Scheduled</p>
+                  <p className="font-medium text-[#71717A]">{queueCount}</p>
+                </div>
+                <div className="flex items-center justify-between border-b border-[#F4F4F5] pb-2">
+                  <p className="font-bold text-[#2D3648]">Drafts</p>
+                  <p className="font-medium text-[#71717A]">{stats.drafts}</p>
+                </div>
+                <div className="flex items-center justify-between">
+                  <p className="font-bold text-[#2D3648]">Views</p>
+                  <p className="font-medium text-[#71717A]">{stats.totalViews.toLocaleString()}</p>
+                </div>
               </div>
             </div>
-          )}
 
-          {filteredArticles.length === 0 && (
-            <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', padding: '100px 0' }}>
-              <FileText size={60} color="#eee" style={{ marginBottom: '24px' }} />
-              <h2 style={{ fontSize: '24px', fontWeight: 800, color: '#1a1a1a', marginBottom: '8px' }}>No stories found</h2>
-              <p style={{ color: '#999', fontWeight: 600 }}>Try adjusting your search or create a new article.</p>
+            <div className="relative overflow-hidden rounded-[10px] bg-[#FFFBF7] px-6 py-6">
+              <div className="absolute -bottom-10 right-[-22px] h-32 w-32 rounded-full bg-[#FFF0E6]" />
+              <h3 className="text-[20px] font-bold text-[#2D3648]">Need Better Reach?</h3>
+              <p className="mt-2 max-w-[230px] text-base font-medium text-[#52525B]">
+                Connect more platforms and publish multiple articles in one flow.
+              </p>
+              <button
+                onClick={() => router.push("/dashboard/integrations")}
+                className="mt-6 rounded-[34px] bg-[#FB6503] px-6 py-2.5 text-base font-medium text-white shadow"
+              >
+                Manage Platforms
+              </button>
             </div>
-          )}
-        </section>
+
+            <div className="rounded-[10px] border border-[#E4E4E7] bg-white px-6 py-6">
+              <p className="text-base font-medium text-[#2D3648]">Quick Actions</p>
+              <div className="mt-4 space-y-2.5">
+                <button
+                  onClick={() => router.push("/dashboard/articles/new")}
+                  className="w-full rounded-xl border border-[#E9E9E9] bg-[#FFFAF3] px-3 py-2 text-left text-sm font-bold text-[#2D3648]"
+                >
+                  Create a new article
+                </button>
+                <button
+                  onClick={() => router.push("/dashboard/analytics")}
+                  className="w-full rounded-xl border border-[#E9E9E9] bg-[#FFFAF3] px-3 py-2 text-left text-sm font-bold text-[#2D3648]"
+                >
+                  Open analytics
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>
       </div>
-    </>
+    </div>
   )
 }

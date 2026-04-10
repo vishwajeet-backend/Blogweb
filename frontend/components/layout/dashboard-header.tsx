@@ -1,226 +1,80 @@
 "use client"
 
-import { Search, Bell, LogOut, Menu, X, ChevronDown } from "lucide-react"
+import { Bell, ChevronDown, LogOut, Menu, Moon, Search, Sun } from "lucide-react"
 import { useAuth } from "@/lib/context/AuthContext"
-import { useRouter, usePathname } from "next/navigation"
-import { useState } from "react"
-import Link from "next/link"
+import { useTheme } from "@/lib/context/ThemeContext"
 
-export function DashboardHeader() {
+function initials(name: string) {
+  return name
+    .split(" ")
+    .map((part) => part[0])
+    .join("")
+    .slice(0, 2)
+    .toUpperCase()
+}
+
+export function DashboardHeader({ onMenuClick }: { onMenuClick?: () => void }) {
   const { user, logout } = useAuth()
-  const router = useRouter()
-  const pathname = usePathname()
-  const [mobileMenuOpen, setMobileMenuOpen] = useState(false)
-
-  const getInitials = (name: string) => {
-    return name
-      .split(' ')
-      .map(n => n[0])
-      .join('')
-      .toUpperCase()
-      .slice(0, 2)
-  }
+  const { isDark, toggleTheme } = useTheme()
 
   return (
-    <>
-      <style jsx>{`
-        @media (max-width: 768px) {
-          header {
-            height: 64px !important;
-            padding: 0 16px !important;
-          }
-        }
-        @media (max-width: 480px) {
-          header {
-            height: 60px !important;
-            padding: 0 12px !important;
-          }
-        }
-      `}</style>
-      <header style={{
-        display: 'flex',
-        height: '80px',
-        alignItems: 'center',
-        justifyContent: 'space-between',
-        borderBottom: '1px solid #eee',
-        backgroundColor: '#fff',
-        padding: '0 40px',
-        position: 'relative'
-      }}>
-        {/* Mobile Menu Toggle */}
+    <header
+      className="flex h-14 items-center justify-between border-b border-[#E9E9E9] bg-[rgba(255,255,255,0.86)] px-3 backdrop-blur dark:border-[#2A2A2A] dark:bg-[rgba(20,20,20,0.86)] sm:px-5"
+      style={{ fontFamily: "Satoshi, var(--font-geist-sans), sans-serif" }}
+    >
+      <div className="flex items-center gap-2 sm:gap-3">
         <button
-          onClick={() => setMobileMenuOpen(!mobileMenuOpen)}
-          className="lg:hidden"
-          style={{
-            background: 'none',
-            border: 'none',
-            color: '#1a1a1a',
-            cursor: 'pointer',
-            padding: '8px',
-            display: 'flex',
-            alignItems: 'center',
-            justifyContent: 'center'
-          }}
+          type="button"
+          onClick={onMenuClick}
+          className="rounded-lg p-1 text-[#212121] md:hidden dark:text-[#E5E5E5]"
+          aria-label="Open navigation"
         >
-          {mobileMenuOpen ? <X size={24} /> : <Menu size={24} />}
+          <Menu className="h-5 w-5" />
         </button>
 
-        {/* Search Bar */}
-        <div style={{ position: 'relative', width: '400px' }} className="hidden lg:block">
-          <input
-            type="text"
-            placeholder="Search articles, analytics..."
-            style={{
-              width: '100%',
-              padding: '12px 20px 12px 48px',
-              borderRadius: '50px',
-              border: '1px solid #eee',
-              backgroundColor: '#fff',
-              fontSize: '14px',
-              outline: 'none',
-              color: '#1a1a1a',
-              fontWeight: 500
-            }}
-          />
-          <Search style={{ position: 'absolute', left: '18px', top: '50%', transform: 'translateY(-50%)', color: '#999' }} size={18} />
+        <div className="flex w-[170px] items-center gap-2.5 rounded-[28px] border border-[#E45C03] px-2.5 py-2 shadow-[0_2px_2px_0_#FECFB1] sm:w-[280px] lg:w-[374px] dark:border-[#FC8435] dark:bg-[#1E1E1E] dark:shadow-none">
+        <Search className="h-[18px] w-[18px] text-[#999999]" />
+        <input
+          type="text"
+          placeholder="Search Documentation"
+          className="w-full bg-transparent text-sm font-medium text-[#212121] placeholder:text-[#999999] outline-none dark:text-[#F7F7F7] sm:text-base"
+        />
+      </div>
+      </div>
+
+      <div className="flex items-center gap-3 sm:gap-6 lg:gap-10">
+        <div className="flex items-center gap-3 text-[#212121] sm:gap-5 dark:text-[#E5E5E5]">
+          <button type="button" onClick={toggleTheme} className="rounded-full p-1" aria-label="Toggle dark mode">
+            {isDark ? <Sun className="h-5 w-5" /> : <Moon className="h-5 w-5" />}
+          </button>
+          <Bell className="h-6 w-6" />
         </div>
 
-        {/* Right Side Icons */}
-        <div style={{ display: 'flex', alignItems: 'center', gap: '24px' }}>
-          <div style={{ display: 'flex', alignItems: 'center', gap: '16px', borderRight: '1px solid #eee', paddingRight: '24px' }} className="hidden sm:flex">
-            <button style={{ background: 'none', border: 'none', color: '#1a1a1a', cursor: 'pointer', position: 'relative' }}>
-              <Bell size={20} />
-              <div style={{ position: 'absolute', top: '-2px', right: '-2px', width: '8px', height: '8px', backgroundColor: '#FF7A33', borderRadius: '50%', border: '2px solid #fff' }}></div>
-            </button>
+        <div className="flex items-center gap-2 sm:gap-3">
+          <div className="hidden w-[100px] text-right leading-tight sm:block">
+            <p className="text-base font-medium text-black dark:text-white">{user?.name || "Isabella V."}</p>
+            <p className="text-[13px] font-medium text-[#6A6A6A] dark:text-[#B3B3B3]">Editor in Chief</p>
           </div>
 
-          {/* User Profile */}
-          <div style={{ display: 'flex', alignItems: 'center', gap: '12px', cursor: 'pointer' }}>
-            <div style={{ textAlign: 'right' }} className="hidden lg:block">
-              <p style={{ margin: 0, fontSize: '14px', fontWeight: 800, color: '#1a1a1a' }}>{user?.name || 'User'}</p>
-              <p style={{ margin: 0, fontSize: '12px', fontWeight: 600, color: '#999' }}>{user?.subscriptionPlan || 'Free Plan'}</p>
+          {user?.avatar ? (
+            <img src={user.avatar} alt="avatar" className="h-[34px] w-[34px] rounded-full object-cover" />
+          ) : (
+            <div className="flex h-[34px] w-[34px] items-center justify-center rounded-full bg-[#FB6503] text-xs font-bold text-white">
+              {user ? initials(user.name) : "IV"}
             </div>
-            <div style={{ position: 'relative' }}>
-              {user?.avatar ? (
-                <img src={user.avatar} alt="" style={{ width: '40px', height: '40px', borderRadius: '50%', objectFit: 'cover' }} />
-              ) : (
-                <div style={{ width: '40px', height: '40px', borderRadius: '50%', backgroundColor: '#FF7A33', color: 'white', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '14px', fontWeight: 700 }}>
-                  {user ? getInitials(user.name) : 'U'}
-                </div>
-              )}
-            </div>
-            <ChevronDown size={14} color="#999" strokeWidth={3} className="hidden sm:block" />
-          </div>
+          )}
 
-          {/* Logout - Keep functionality */}
+          <ChevronDown className="hidden h-[18px] w-[18px] text-[#6A6A6A] sm:block dark:text-[#B3B3B3]" />
+
           <button
             onClick={logout}
-            style={{
-              background: 'none',
-              border: 'none',
-              color: '#666',
-              cursor: 'pointer',
-              padding: '8px',
-              borderRadius: '8px',
-              backgroundColor: '#f9f9f9'
-            }}
+            className="rounded-lg p-2 text-[#6A6A6A] hover:bg-[#FFFAF3] dark:text-[#B3B3B3] dark:hover:bg-[#242424]"
             title="Logout"
           >
-            <LogOut size={18} />
+            <LogOut className="h-4 w-4" />
           </button>
         </div>
-
-        {/* Mobile Links Overlay (Optional but good for UX) */}
-        {mobileMenuOpen && (
-          <div style={{
-            position: 'absolute',
-            top: '80px',
-            left: 0,
-            right: 0,
-            backgroundColor: '#fff',
-            padding: '24px 20px',
-            borderBottom: '1px solid #eee',
-            zIndex: 100,
-            display: 'flex',
-            flexDirection: 'column',
-            gap: '12px',
-            boxShadow: '0 8px 20px rgba(0,0,0,0.08)',
-            maxHeight: 'calc(100vh - 80px)',
-            overflowY: 'auto'
-          }} className="md:hidden">
-            <Link
-              href="/dashboard"
-              onClick={() => setMobileMenuOpen(false)}
-              style={{
-                textDecoration: 'none',
-                color: pathname === '/dashboard' ? '#FF7A33' : '#1a1a1a',
-                fontWeight: 700,
-                fontSize: '15px',
-                padding: '12px 16px',
-                borderRadius: '12px',
-                backgroundColor: pathname === '/dashboard' ? '#FFF5F0' : 'transparent',
-                transition: 'all 0.2s'
-              }}
-            >Dashboard</Link>
-            <Link
-              href="/dashboard/articles"
-              onClick={() => setMobileMenuOpen(false)}
-              style={{
-                textDecoration: 'none',
-                color: pathname?.startsWith('/dashboard/articles') ? '#FF7A33' : '#1a1a1a',
-                fontWeight: 700,
-                fontSize: '15px',
-                padding: '12px 16px',
-                borderRadius: '12px',
-                backgroundColor: pathname?.startsWith('/dashboard/articles') ? '#FFF5F0' : 'transparent',
-                transition: 'all 0.2s'
-              }}
-            >Articles</Link>
-            <Link
-              href="/dashboard/integrations"
-              onClick={() => setMobileMenuOpen(false)}
-              style={{
-                textDecoration: 'none',
-                color: pathname?.startsWith('/dashboard/integrations') ? '#FF7A33' : '#1a1a1a',
-                fontWeight: 700,
-                fontSize: '15px',
-                padding: '12px 16px',
-                borderRadius: '12px',
-                backgroundColor: pathname?.startsWith('/dashboard/integrations') ? '#FFF5F0' : 'transparent',
-                transition: 'all 0.2s'
-              }}
-            >Publishing</Link>
-            <Link
-              href="/dashboard/analytics"
-              onClick={() => setMobileMenuOpen(false)}
-              style={{
-                textDecoration: 'none',
-                color: pathname?.startsWith('/dashboard/analytics') ? '#FF7A33' : '#1a1a1a',
-                fontWeight: 700,
-                fontSize: '15px',
-                padding: '12px 16px',
-                borderRadius: '12px',
-                backgroundColor: pathname?.startsWith('/dashboard/analytics') ? '#FFF5F0' : 'transparent',
-                transition: 'all 0.2s'
-              }}
-            >Analytics</Link>
-            <Link
-              href="/dashboard/settings"
-              onClick={() => setMobileMenuOpen(false)}
-              style={{
-                textDecoration: 'none',
-                color: pathname?.startsWith('/dashboard/settings') ? '#FF7A33' : '#1a1a1a',
-                fontWeight: 700,
-                fontSize: '15px',
-                padding: '12px 16px',
-                borderRadius: '12px',
-                backgroundColor: pathname?.startsWith('/dashboard/settings') ? '#FFF5F0' : 'transparent',
-                transition: 'all 0.2s'
-              }}
-            >Settings</Link>
-          </div>
-        )}
-      </header>
-    </>
+      </div>
+    </header>
   )
 }

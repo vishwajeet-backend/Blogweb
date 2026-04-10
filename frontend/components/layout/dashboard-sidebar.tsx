@@ -2,213 +2,125 @@
 
 import Link from "next/link"
 import { usePathname, useRouter } from "next/navigation"
-import { useAuth } from "@/lib/context/AuthContext"
 import {
   LayoutDashboard,
-  FileText,
+  AlignLeft,
   Send,
   BarChart3,
-  LayoutGrid,
+  Command,
   Users2,
   Settings,
   HelpCircle,
-  Download,
-  UserPlus,
+  Star,
 } from "lucide-react"
+import { cn } from "@/lib/utils"
 
-export function DashboardSidebar() {
+type NavItem = {
+  name: string
+  href: string
+  icon: React.ComponentType<{ className?: string }>
+}
+
+export function DashboardSidebar({ className, onNavigate }: { className?: string; onNavigate?: () => void }) {
   const pathname = usePathname()
   const router = useRouter()
-  const { user } = useAuth()
 
-  const navGroups = [
+  const navGroups: Array<{ label: string; items: NavItem[] }> = [
     {
       label: "CONTENT",
       items: [
-        { name: "Articles", href: "/dashboard/articles", icon: FileText },
-        { name: "Collaborate", href: "/dashboard/collaborate", icon: UserPlus },
-        { name: "Export", href: "/dashboard/export", icon: Download },
-      ]
+        { name: "Articles", href: "/dashboard/articles", icon: AlignLeft },
+        { name: "Publishing", href: "/dashboard/integrations", icon: Send },
+      ],
     },
     {
       label: "DATA",
       items: [
         { name: "Analytics", href: "/dashboard/analytics", icon: BarChart3 },
-        { name: "Integrations", href: "/dashboard/integrations", icon: LayoutGrid },
-      ]
+        { name: "Integrations", href: "/dashboard/integrations", icon: Command },
+      ],
     },
     {
       label: "SYSTEM",
       items: [
         { name: "Team", href: "/dashboard/team", icon: Users2 },
         { name: "Settings", href: "/dashboard/settings", icon: Settings },
-      ]
-    }
+      ],
+    },
   ]
 
   return (
-    <div style={{
-      display: 'flex',
-      height: '100%',
-      width: '260px',
-      flexDirection: 'column',
-      backgroundColor: '#f9f9f9',
-      borderRight: '1px solid #eee',
-    }}>
-      {/* Logo */}
-      <div style={{
-        display: 'flex',
-        height: '80px',
-        alignItems: 'center',
-        padding: '0 24px',
-        marginBottom: '20px'
-      }}>
-        <Link href="/dashboard" style={{
-          display: 'flex',
-          alignItems: 'center',
-          gap: '10px',
-          textDecoration: 'none',
-        }}>
-          <div style={{ width: '32px', height: '32px', backgroundColor: '#FF7A33', borderRadius: '8px', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-            <Send size={18} color="white" />
-          </div>
-          <span style={{
-            fontSize: '20px',
-            fontWeight: 800,
-            color: '#1a1a1a',
-            letterSpacing: '-0.02em'
-          }}>PublishType</span>
-        </Link>
-      </div>
-
-      {/* Navigation */}
-      <nav style={{
-        flex: 1,
-        overflowY: 'auto',
-        padding: '0 12px'
-      }}>
-        {/* Dashboard Link */}
-        <div style={{ marginBottom: '32px' }}>
-          <Link
-            href="/dashboard"
-            style={{
-              display: 'flex',
-              alignItems: 'center',
-              gap: '12px',
-              padding: '12px 16px',
-              fontSize: '14px',
-              fontWeight: pathname === '/dashboard' ? 800 : 600,
-              borderRadius: '16px',
-              transition: 'all 0.2s',
-              textDecoration: 'none',
-              color: pathname === '/dashboard' ? '#1a1a1a' : '#666',
-              backgroundColor: pathname === '/dashboard' ? '#fff' : 'transparent',
-              boxShadow: pathname === '/dashboard' ? '0 4px 12px rgba(0,0,0,0.05)' : 'none',
-              border: pathname === '/dashboard' ? '1px solid #eee' : '1px solid transparent'
-            }}
-          >
-            <LayoutDashboard size={18} strokeWidth={pathname === '/dashboard' ? 2.5 : 2} />
-            <span>Dashboard</span>
+    <aside
+      className={cn(
+        "flex h-screen w-[280px] flex-col justify-between border-r border-[#E9E9E9] bg-[rgba(215,211,207,0.20)] px-5 pb-5 backdrop-blur-[12px] dark:border-[#2A2A2A] dark:bg-[rgba(28,28,28,0.74)]",
+        className,
+      )}
+      style={{ fontFamily: "Satoshi, var(--font-geist-sans), sans-serif" }}
+    >
+      <div className="flex min-h-0 flex-1 flex-col gap-10">
+        <div className="flex h-14 items-center border-b border-[#E9E9E9] px-2.5">
+          <Link href="/dashboard" className="text-[34px] font-black uppercase tracking-[-0.04em] text-[#FB6503]">
+            LOGOIPSUM
           </Link>
         </div>
 
-        {navGroups.map((group) => (
-          <div key={group.label} style={{ marginBottom: '32px' }}>
-            <p style={{
-              fontSize: '11px',
-              fontWeight: 800,
-              letterSpacing: '0.05em',
-              color: '#999',
-              textTransform: 'uppercase',
-              margin: '0 16px 12px'
-            }}>
-              {group.label}
-            </p>
-            <div style={{ display: 'flex', flexDirection: 'column', gap: '4px' }}>
+        <nav className="space-y-2 overflow-y-auto">
+          <Link
+            href="/dashboard"
+            onClick={onNavigate}
+            className={`flex items-center gap-3 rounded-2xl px-3 py-4 text-base font-medium ${
+              pathname === "/dashboard" ? "bg-[#FFFAF3] text-black dark:bg-[#2A2A2A] dark:text-white" : "text-[#212121] dark:text-[#E5E5E5]"
+            }`}
+          >
+            <LayoutDashboard className="h-6 w-6" />
+            Dashboard
+          </Link>
+
+          {navGroups.map((group) => (
+            <div key={group.label} className="space-y-1.5 pt-1">
+              <p className="px-3 text-[13px] font-bold uppercase text-[#4D4D4D] dark:text-[#B3B3B3]">{group.label}</p>
               {group.items.map((item) => {
                 const Icon = item.icon
-                const isActive = pathname === item.href || pathname?.startsWith(item.href + "/")
-
+                const active = pathname === item.href || pathname?.startsWith(item.href + "/")
                 return (
                   <Link
-                    key={item.name}
+                    key={item.href}
                     href={item.href}
-                    style={{
-                      display: 'flex',
-                      alignItems: 'center',
-                      gap: '12px',
-                      padding: '12px 16px',
-                      fontSize: '14px',
-                      fontWeight: isActive ? 800 : 600,
-                      borderRadius: '16px',
-                      transition: 'all 0.2s',
-                      textDecoration: 'none',
-                      color: isActive ? '#1a1a1a' : '#666',
-                      backgroundColor: isActive ? '#fff' : 'transparent',
-                      boxShadow: isActive ? '0 4px 12px rgba(0,0,0,0.05)' : 'none',
-                      border: isActive ? '1px solid #eee' : '1px solid transparent'
-                    }}
+                    onClick={onNavigate}
+                    className={`flex items-center gap-3 rounded-2xl px-3 py-4 text-base font-medium transition-colors ${
+                      active
+                        ? "bg-[#FFFAF3] text-black dark:bg-[#2A2A2A] dark:text-white"
+                        : "text-[#212121] hover:bg-[#FFFBF7] dark:text-[#E5E5E5] dark:hover:bg-[#242424]"
+                    }`}
                   >
-                    <Icon size={18} strokeWidth={isActive ? 2.5 : 2} />
-                    <span>{item.name}</span>
+                    <Icon className="h-6 w-6" />
+                    {item.name}
                   </Link>
                 )
               })}
             </div>
-          </div>
-        ))}
-      </nav>
+          ))}
+        </nav>
+      </div>
 
-      {/* Bottom Section */}
-      <div style={{
-        padding: '24px 16px',
-        borderTop: '1px solid #eee',
-      }}>
+      <div className="space-y-2.5">
         <Link
           href="/dashboard/help"
-          style={{
-            display: 'flex',
-            alignItems: 'center',
-            gap: '12px',
-            padding: '12px 16px',
-            fontSize: '14px',
-            fontWeight: 700,
-            color: '#666',
-            borderRadius: '16px',
-            transition: 'all 0.2s',
-            textDecoration: 'none',
-            marginBottom: '16px',
-          }}
+          onClick={onNavigate}
+          className="flex h-14 items-center justify-center gap-2.5 border-t border-[#E9E9E9] px-2.5 text-base font-medium text-[#212121] dark:border-[#2A2A2A] dark:text-[#E5E5E5]"
         >
-          <HelpCircle size={18} strokeWidth={2.5} />
-          <span>Help & Docs</span>
+          <HelpCircle className="h-6 w-6" />
+          Help &amp; Docs
         </Link>
 
         <button
-          onClick={() => router.push('/pricing')}
-          style={{
-            width: '100%',
-            borderRadius: '50px',
-            backgroundColor: '#FF7A33',
-            padding: '16px',
-            fontSize: '13px',
-            fontWeight: 800,
-            color: '#fff',
-            border: 'none',
-            cursor: 'pointer',
-            transition: 'all 0.2s',
-            display: 'flex',
-            alignItems: 'center',
-            justifyContent: 'center',
-            gap: '8px',
-            boxShadow: '0 8px 25px rgba(255, 122, 51, 0.3)',
-            textTransform: 'uppercase',
-            letterSpacing: '0.05em'
-          }}
+          onClick={() => router.push("/pricing")}
+          className="flex h-14 w-full items-center justify-center gap-2.5 rounded-[26px] border-b border-[#BABABA] bg-[#FB6503] text-base font-medium text-[#FFFEFD]"
         >
-          <span style={{ fontSize: '18px', lineHeight: 1 }}>☆</span> UPGRADE PLAN
+          <Star className="h-5 w-5" />
+          UPGRADE PLAN
         </button>
       </div>
-    </div>
+    </aside>
   )
 }
