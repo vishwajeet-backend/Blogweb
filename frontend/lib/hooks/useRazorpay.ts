@@ -17,16 +17,16 @@ export type BillingPeriod = 'monthly' | 'annual'
 // Plan pricing in INR for display
 export const PLAN_PRICING_DISPLAY = {
   STARTER: {
-    monthly: { usd: 60, inr: 5000 },
-    annual: { usd: 482, inr: 40000 },
+    monthly: { inr: 5000 },
+    annual: { inr: 40000 },
   },
   CREATOR: {
-    monthly: { usd: 181, inr: 15000 },
-    annual: { usd: 1807, inr: 150000 },
+    monthly: { inr: 15000 },
+    annual: { inr: 150000 },
   },
   PROFESSIONAL: {
-    monthly: { usd: 241, inr: 20000 },
-    annual: { usd: 2169, inr: 180000 },
+    monthly: { inr: 20000 },
+    annual: { inr: 180000 },
   },
 }
 

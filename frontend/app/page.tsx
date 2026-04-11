@@ -57,21 +57,21 @@ const featureCards = [
 const plans = [
   {
     name: "Basic Plan",
-    price: "$19",
+    price: "₹5,000",
     period: "Month",
     featured: false,
     points: ["15,000 words/month", "5 blog templates", "15 images/month", "Basic SEO tools", "Email support"],
   },
   {
     name: "Business Plan",
-    price: "$79",
+    price: "₹15,000",
     period: "Month",
     featured: true,
     points: ["50,000 words/month", "50 blog templates", "50 images/month", "Advanced SEO suite", "Priority support"],
   },
   {
     name: "Enterprise Plan",
-    price: "$199",
+    price: "₹20,000",
     period: "Month",
     featured: false,
     points: ["Unlimited words", "Custom templates", "Unlimited images", "Team collaboration", "Dedicated support"],

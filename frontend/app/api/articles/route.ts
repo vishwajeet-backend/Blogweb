@@ -129,7 +129,19 @@ export async function POST(request: NextRequest) {
     const currentUser = await authService.getCurrentUser(accessToken);
 
     const body = await request.json();
-    const { title, content, excerpt, folderId, toneOfVoice, contentFramework } = body;
+    const {
+      title,
+      content,
+      excerpt,
+      folderId,
+      toneOfVoice,
+      contentFramework,
+      featuredImage,
+      metaTitle,
+      metaDescription,
+      focusKeyword,
+      scheduleAt,
+    } = body;
 
     if (!title) {
       return NextResponse.json(
@@ -145,7 +157,8 @@ export async function POST(request: NextRequest) {
       .replace(/(^-|-$)/g, '');
 
     // Calculate word count and reading time
-    const wordCount = content ? content.split(/\s+/).length : 0;
+    const normalizedContent = typeof content === 'string' ? content : '';
+    const wordCount = normalizedContent ? normalizedContent.split(/\s+/).length : 0;
     const readingTime = Math.ceil(wordCount / 200); // Assuming 200 words per minute
 
     const article = await prisma.article.create({
@@ -153,14 +166,19 @@ export async function POST(request: NextRequest) {
         userId: currentUser.id,
         title,
         slug: `${slug}-${Date.now()}`,
-        content: content || '',
+        content: normalizedContent,
         excerpt,
         folderId,
+        featuredImage,
+        metaTitle,
+        metaDescription,
+        focusKeyword,
+        ...(scheduleAt ? { scheduleAt: new Date(scheduleAt) } : {}),
         wordCount,
         readingTime,
         toneOfVoice,
         contentFramework,
-        status: 'DRAFT',
+        status: scheduleAt ? 'SCHEDULED' : 'DRAFT',
       },
     });
 

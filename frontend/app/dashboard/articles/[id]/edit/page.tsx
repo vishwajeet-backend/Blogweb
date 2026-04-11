@@ -66,7 +66,7 @@ export default function ArticleEditPage() {
         throw new Error(articleData.error || 'Failed to fetch article');
       }
 
-      setArticle(articleData.data);
+      setArticle(articleData.data.article);
 
       // Fetch current user (you might want to store this in context)
       const userResponse = await fetch('/api/auth/me', {
@@ -80,7 +80,7 @@ export default function ArticleEditPage() {
         console.log('User data received:', userData); // Debug log
 
         if (userData.success && userData.data) {
-          setCurrentUser(userData.data);
+          setCurrentUser(userData.data.user);
         }
       } else {
         console.error('Failed to fetch user data');

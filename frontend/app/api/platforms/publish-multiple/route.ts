@@ -39,7 +39,7 @@ export async function POST(request: NextRequest) {
     }
 
     // Validate platforms
-    const validPlatforms: Platform[] = ['DEVTO', 'HASHNODE', 'GHOST', 'WORDPRESS', 'WIX'];
+    const validPlatforms: Platform[] = ['PUBLISHTYPE', 'DEVTO', 'HASHNODE', 'GHOST', 'WORDPRESS', 'WIX'];
     const invalidPlatforms = platforms.filter((p) => !validPlatforms.includes(p));
 
     if (invalidPlatforms.length > 0) {

@@ -14,26 +14,26 @@ declare global {
 
 const plans = [
   {
-    id: "BASIC" as const,
-    name: "Basic Plan",
-    monthlyPrice: 1565,
-    annualPrice: 15650,
+    id: "STARTER" as const,
+    name: "Starter Plan",
+    monthlyPrice: 5000,
+    annualPrice: 40000,
     featured: false,
     points: ["15,000 words/month", "5 blog templates", "15 images/month", "Basic SEO tools", "Email support"],
   },
   {
-    id: "BUSINESS" as const,
-    name: "Business Plan",
-    monthlyPrice: 1565,
-    annualPrice: 15650,
+    id: "CREATOR" as const,
+    name: "Creator Plan",
+    monthlyPrice: 15000,
+    annualPrice: 150000,
     featured: true,
     points: ["15,000 words/month", "5 blog templates", "15 images/month", "Basic SEO tools", "Email support"],
   },
   {
-    id: "ENTERPRISE" as const,
-    name: "Enterprise Plan",
-    monthlyPrice: 1565,
-    annualPrice: 15650,
+    id: "PROFESSIONAL" as const,
+    name: "Professional Plan",
+    monthlyPrice: 20000,
+    annualPrice: 180000,
     featured: false,
     points: ["15,000 words/month", "5 blog templates", "15 images/month", "Basic SEO tools", "Email support"],
   },
@@ -69,7 +69,7 @@ export default function PricingPage() {
     })
   }
 
-  const handlePayment = async (planKey: "BASIC" | "BUSINESS" | "ENTERPRISE") => {
+  const handlePayment = async (planKey: "STARTER" | "CREATOR" | "PROFESSIONAL") => {
     if (!user) {
       toast.error("Please login to subscribe")
       router.push("/login?redirect=/pricing")
@@ -195,7 +195,7 @@ export default function PricingPage() {
                   <div className={plan.featured ? "bg-[#fb6503] p-5 text-white" : "bg-gradient-to-b from-[#fff9f1] to-[#fff7ed] p-5 text-[#1e1e1e]"}>
                     <p className="text-sm font-bold">{plan.name}</p>
                     <p className="mt-3 text-3xl font-bold">
-                      ${Math.round(price / 82)}/<span className={plan.featured ? "text-sm text-white" : "text-sm text-[#6a6a6a]"}>{billingPeriod === "monthly" ? "Month" : "Year"}</span>
+                      ₹{price.toLocaleString("en-IN")}/<span className={plan.featured ? "text-sm text-white" : "text-sm text-[#6a6a6a]"}>{billingPeriod === "monthly" ? "Month" : "Year"}</span>
                     </p>
                     <button
                       onClick={() => handlePayment(plan.id)}

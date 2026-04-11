@@ -8,7 +8,7 @@ import { DevToService } from './devto.service';
 import { HashnodeService } from './hashnode.service';
 import { GhostService } from './ghost.service';
 
-export type Platform = 'DEVTO' | 'HASHNODE' | 'GHOST' | 'WORDPRESS' | 'WIX';
+export type Platform = 'PUBLISHTYPE' | 'DEVTO' | 'HASHNODE' | 'GHOST' | 'WORDPRESS' | 'WIX';
 
 export interface PublishOptions {
   articleId: string;
@@ -98,12 +98,13 @@ export class PublishingService {
 
     // Update article status to PUBLISHED if at least one platform succeeded
     const hasSuccessfulPublish = mappedResults.some(r => r.success);
-    if (hasSuccessfulPublish && article.status === 'DRAFT') {
+    if (hasSuccessfulPublish && article.status !== 'PUBLISHED') {
       await prisma.article.update({
         where: { id: articleId },
         data: {
           status: 'PUBLISHED',
           publishedAt: new Date(),
+          scheduleAt: null,
         },
       });
     }
@@ -124,6 +125,11 @@ export class PublishingService {
     const { platform, article, userId, published, attempt = 1 } = params;
 
     try {
+      // PublishType is a built-in platform and does not need external credentials.
+      if (platform === 'PUBLISHTYPE') {
+        return await this.publishToPublishType(article);
+      }
+
       // Get platform connection
       const connection = await prisma.platformConnection.findFirst({
         where: {
@@ -196,6 +202,34 @@ export class PublishingService {
 
       throw error;
     }
+  }
+
+  /**
+   * Publish to internal PublishType feed.
+   */
+  private static async publishToPublishType(article: any) {
+    let coverImage = article.coverImage || article.featuredImage || null;
+
+    if (!coverImage && article.content) {
+      const imgMatch = article.content.match(/<img[^>]+src=["']([^"']+)["']/i);
+      if (imgMatch?.[1]) {
+        coverImage = imgMatch[1];
+      }
+    }
+
+    await prisma.article.update({
+      where: { id: article.id },
+      data: {
+        isPublicOnPublishType: true,
+        ...(coverImage ? { coverImage } : {}),
+      },
+    });
+
+    return {
+      success: true,
+      postId: article.id,
+      url: `${process.env.APP_URL || process.env.NEXTAUTH_URL || 'http://localhost:3000'}/blog/${article.id}`,
+    };
   }
 
   /**

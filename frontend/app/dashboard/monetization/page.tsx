@@ -28,7 +28,7 @@ export default function MonetizationPage() {
             <DollarSign className="h-4 w-4 text-neutral-600" />
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold">$2,345</div>
+            <div className="text-2xl font-bold">₹1,94,635</div>
             <p className="text-xs text-neutral-600 mt-1">
               <span className="text-green-600">+12.5%</span> from last month
             </p>
@@ -41,7 +41,7 @@ export default function MonetizationPage() {
             <TrendingUp className="h-4 w-4 text-neutral-600" />
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold">$487</div>
+            <div className="text-2xl font-bold">₹40,421</div>
             <p className="text-xs text-neutral-600 mt-1">
               15 days remaining
             </p>
@@ -92,21 +92,21 @@ export default function MonetizationPage() {
               <div className="flex items-center justify-between p-4 bg-neutral-50 rounded-lg">
                 <div>
                   <p className="font-medium">Monthly Subscription</p>
-                  <p className="text-sm text-neutral-600">$9.99/month</p>
+                  <p className="text-sm text-neutral-600">₹829/month</p>
                 </div>
                 <div className="text-right">
                   <p className="font-bold">124 subscribers</p>
-                  <p className="text-sm text-neutral-600">$1,238/mo</p>
+                  <p className="text-sm text-neutral-600">₹1,02,754/mo</p>
                 </div>
               </div>
               <div className="flex items-center justify-between p-4 bg-neutral-50 rounded-lg">
                 <div>
                   <p className="font-medium">Annual Subscription</p>
-                  <p className="text-sm text-neutral-600">$99/year</p>
+                  <p className="text-sm text-neutral-600">₹8,217/year</p>
                 </div>
                 <div className="text-right">
                   <p className="font-bold">18 subscribers</p>
-                  <p className="text-sm text-neutral-600">$149/mo avg</p>
+                  <p className="text-sm text-neutral-600">₹12,367/mo avg</p>
                 </div>
               </div>
               <Button variant="outline" className="w-full gap-2">
@@ -172,7 +172,7 @@ export default function MonetizationPage() {
                   <p className="font-medium">Commission Earned</p>
                   <p className="text-sm text-neutral-600">This month</p>
                 </div>
-                <p className="text-2xl font-bold">$234</p>
+                <p className="text-2xl font-bold">₹19,422</p>
               </div>
             </div>
           </CardContent>
@@ -226,7 +226,7 @@ export default function MonetizationPage() {
                 <p className="text-sm text-neutral-600">Ready to withdraw</p>
               </div>
               <div className="text-right">
-                <p className="text-2xl font-bold">$487.00</p>
+                <p className="text-2xl font-bold">₹40,421.00</p>
                 <Button size="sm" className="mt-2">Request Payout</Button>
               </div>
             </div>

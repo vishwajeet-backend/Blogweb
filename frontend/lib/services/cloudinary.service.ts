@@ -37,6 +37,22 @@ export interface CloudinaryTransformOptions {
 }
 
 export class CloudinaryService {
+  private static sanitizePublicId(filename: string): string {
+    const withoutExtension = filename.replace(/\.[^/.]+$/, '');
+    const normalized = withoutExtension
+      .normalize('NFKD')
+      .replace(/[\u0300-\u036f]/g, '');
+
+    const sanitized = normalized
+      .replace(/[^a-zA-Z0-9_-]+/g, '-')
+      .replace(/-+/g, '-')
+      .replace(/^[-_]+|[-_]+$/g, '')
+      .toLowerCase()
+      .slice(0, 100);
+
+    return sanitized || `image-${Date.now()}`;
+  }
+
   /**
    * Upload image from file buffer
    */
@@ -59,7 +75,9 @@ export class CloudinaryService {
       };
 
       if (options?.filename) {
-        uploadOptions.public_id = options.filename;
+        uploadOptions.public_id = this.sanitizePublicId(options.filename);
+        uploadOptions.use_filename = false;
+        uploadOptions.unique_filename = true;
       }
 
       // Add transformations if provided
@@ -119,7 +137,9 @@ export class CloudinaryService {
       };
 
       if (options?.filename) {
-        uploadOptions.public_id = options.filename;
+        uploadOptions.public_id = this.sanitizePublicId(options.filename);
+        uploadOptions.use_filename = false;
+        uploadOptions.unique_filename = true;
       }
 
       if (options?.transformation) {
