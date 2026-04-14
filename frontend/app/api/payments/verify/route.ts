@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { authService } from '@/lib/services/auth.service';
-import { verifyPayment, fetchOrderDetails } from '@/lib/services/razorpay.service';
+import { verifyPayment, fetchOrderDetails, fetchPaymentDetails } from '@/lib/services/razorpay.service';
 import prisma from '@/lib/prisma';
 import { SubscriptionPlan } from '@prisma/client';
 
@@ -46,7 +46,36 @@ export async function POST(request: NextRequest) {
 
     // Fetch order details to get plan info
     const orderDetails = await fetchOrderDetails(razorpay_order_id);
+    const paymentDetails = await fetchPaymentDetails(razorpay_payment_id);
     const notes = orderDetails.notes as { plan: string; billingPeriod: string; userId: string };
+
+    if (String(orderDetails.currency || '').toUpperCase() !== 'INR') {
+      return NextResponse.json(
+        { success: false, error: 'Invalid currency in order. Only INR is supported.' },
+        { status: 400 }
+      );
+    }
+
+    if (String(paymentDetails.currency || '').toUpperCase() !== 'INR') {
+      return NextResponse.json(
+        { success: false, error: 'Invalid currency in payment. Only INR is supported.' },
+        { status: 400 }
+      );
+    }
+
+    if (paymentDetails.order_id !== razorpay_order_id) {
+      return NextResponse.json(
+        { success: false, error: 'Payment/order mismatch' },
+        { status: 400 }
+      );
+    }
+
+    if (Number(paymentDetails.amount || 0) !== Number(orderDetails.amount || 0)) {
+      return NextResponse.json(
+        { success: false, error: 'Payment amount mismatch' },
+        { status: 400 }
+      );
+    }
 
     // Verify the order belongs to the current user
     if (notes.userId !== currentUser.id) {
@@ -96,7 +125,9 @@ export async function POST(request: NextRequest) {
           billingPeriod: notes.billingPeriod,
           paymentId: razorpay_payment_id,
           orderId: razorpay_order_id,
-          amount: orderDetails.amount,
+          amountPaise: Number(orderDetails.amount || 0),
+          amountInRupees: Number(orderDetails.amount || 0) / 100,
+          currency: 'INR',
         },
       },
     });
@@ -109,6 +140,8 @@ export async function POST(request: NextRequest) {
         payment: {
           orderId: razorpay_order_id,
           paymentId: razorpay_payment_id,
+          amountInRupees: Number(orderDetails.amount || 0) / 100,
+          currency: 'INR',
         },
       },
     });

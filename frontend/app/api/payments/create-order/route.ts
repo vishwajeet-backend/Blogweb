@@ -63,6 +63,13 @@ export async function POST(request: NextRequest) {
       userName: currentUser.name,
     });
 
+    if (String(orderData.currency || '').toUpperCase() !== 'INR') {
+      return NextResponse.json(
+        { success: false, error: 'Currency mismatch. Only INR is supported.' },
+        { status: 500 }
+      );
+    }
+
     return NextResponse.json({
       success: true,
       data: orderData,

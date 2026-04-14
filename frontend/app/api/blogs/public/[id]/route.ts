@@ -13,12 +13,12 @@ export async function GET(
   try {
     const { id: articleId } = await params;
 
-    // Fetch single article directly by ID - much faster than fetching all
+    // Fetch single article by id or slug for public reading
     const article = await prisma.article.findFirst({
       where: {
-        id: articleId,
+        OR: [{ id: articleId }, { slug: articleId }],
         status: 'PUBLISHED',
-        isPublicOnPublishType: true,
+        deletedAt: null,
       },
       select: {
         id: true,
@@ -27,6 +27,7 @@ export async function GET(
         content: true,
         slug: true,
         coverImage: true,
+        featuredImage: true,
         publishedAt: true,
         readTime: true,
         wordCount: true,
@@ -50,6 +51,38 @@ export async function GET(
       );
     }
 
+    const [platformAggRows, publishTypeAgg, commentThreadsCount] = await Promise.all([
+      prisma.platformAnalytics.findMany({
+        where: { publishRecord: { articleId: article.id } },
+        select: { likes: true, comments: true, shares: true, views: true },
+      }),
+      prisma.analytics.aggregate({
+        where: { articleId: article.id, platform: 'PUBLISHTYPE' },
+        _sum: { clicks: true, comments: true, shares: true, views: true },
+      }),
+      prisma.articleComment.count({
+        where: { articleId: article.id },
+      }),
+    ]);
+
+    const platformTotals = platformAggRows.reduce(
+      (acc, row) => {
+        acc.likes += row.likes || 0;
+        acc.comments += row.comments || 0;
+        acc.shares += row.shares || 0;
+        acc.views += row.views || 0;
+        return acc;
+      },
+      { likes: 0, comments: 0, shares: 0, views: 0 }
+    );
+
+    const engagement = {
+      likes: platformTotals.likes + Number(publishTypeAgg._sum.clicks || 0),
+      comments: platformTotals.comments + Number(publishTypeAgg._sum.comments || 0) + Number(commentThreadsCount || 0),
+      shares: platformTotals.shares + Number(publishTypeAgg._sum.shares || 0),
+      views: Math.max(platformTotals.views + Number(publishTypeAgg._sum.views || 0), Number(article.views || 0)),
+    };
+
     // Update Analytics asynchronously
     const recordView = async () => {
       try {
@@ -58,7 +91,7 @@ export async function GET(
 
         // 1. Increment total views on Article
         await prisma.article.update({
-          where: { id: articleId },
+          where: { id: article.id },
           data: { views: { increment: 1 } },
         });
 
@@ -66,7 +99,7 @@ export async function GET(
         await prisma.analytics.upsert({
           where: {
             articleId_platform_date: {
-              articleId,
+              articleId: article.id,
               platform: 'PUBLISHTYPE',
               date: today,
             },
@@ -75,7 +108,7 @@ export async function GET(
             views: { increment: 1 },
           },
           create: {
-            articleId,
+            articleId: article.id,
             platform: 'PUBLISHTYPE',
             date: today,
             views: 1,
@@ -91,7 +124,10 @@ export async function GET(
 
     return NextResponse.json({
       success: true,
-      data: article,
+      data: {
+        ...article,
+        engagement,
+      },
     });
   } catch (error: any) {
     console.error('Public blog article API error:', error);

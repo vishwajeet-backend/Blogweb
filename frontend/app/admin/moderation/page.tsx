@@ -97,7 +97,7 @@ export default function AdminModerationPage() {
       const token = localStorage.getItem('accessToken');
       if (!token) return;
 
-      const response = await fetch('/api/admin/moderation?page=1&limit=20&status=ALL', {
+      const response = await fetch('/api/admin/moderation?page=1&limit=20&status=PENDING', {
         headers: { Authorization: `Bearer ${token}` },
       });
       const json = await response.json();
@@ -187,22 +187,29 @@ export default function AdminModerationPage() {
   return (
     <div className="min-h-screen bg-[#FFFEFD] px-4 py-6 md:px-6 lg:px-8" style={{ fontFamily: 'Satoshi, var(--font-geist-sans), sans-serif' }}>
       <div className="mx-auto max-w-[1220px]">
+        <div className="flex items-center justify-between border-b border-[#E7E5E4] pb-3">
+          <p className="text-[22px] font-bold text-[#1C1917]">Admin Panel</p>
+        </div>
+
         <div className="flex flex-wrap items-start justify-between gap-3">
           <div>
             <p className="text-[10px] font-bold uppercase tracking-[0.08em] text-[#A6A09B]">
               Content Moderation List {detail ? `› Case ${detail.caseNumber}` : ''}
             </p>
-            <h1 className="text-[25px] font-bold text-[#292524]">Content Moderation Details</h1>
+            <h1 className="text-[22px] font-bold text-[#292524] sm:text-[25px]">Content Moderation Details</h1>
             <p className="text-[13px] text-[#79716B]">Reviewing flagged content.</p>
             <AdminNavTabs />
           </div>
 
-          <button
-            onClick={() => router.push('/admin/articles')}
-            className="rounded-full border border-[#FB6503] bg-[#FFFEFD] px-5 py-2 text-[10px] font-bold text-[#57534D] shadow-sm"
-          >
-            Back to List
-          </button>
+          <div className="flex items-center gap-2">
+            {detail ? <span className="rounded px-2 py-1 text-[10px] font-bold text-[#57534D]">Case #{detail.caseNumber}</span> : null}
+            <button
+              onClick={() => router.push('/admin/articles')}
+              className="rounded-full border border-[#FB6503] bg-[#FFFEFD] px-5 py-2 text-[10px] font-bold text-[#57534D] shadow-sm"
+            >
+              Back to List
+            </button>
+          </div>
         </div>
 
         {error && <div className="mt-4 rounded border border-[#FECACA] bg-[#FEF2F2] px-3 py-2 text-sm text-[#B91C1C]">{error}</div>}
@@ -262,7 +269,7 @@ export default function AdminModerationPage() {
 
             <div className="space-y-4">
               <div className="rounded-[10px] bg-[#FFF0E6] p-4">
-                <h3 className="text-[31px] font-medium text-[#292524]">Flag Details</h3>
+                <h3 className="text-[24px] font-medium text-[#292524] sm:text-[31px]">Flag Details</h3>
                 {detail ? (
                   <div className="mt-3 rounded border border-[#E7E5E4] bg-white">
                     <DetailRow label="REASON" value={detail.flag.reason} />
@@ -279,7 +286,7 @@ export default function AdminModerationPage() {
               </div>
 
               <div className="rounded-[14px] border border-[#F5F5F4] bg-white p-4 shadow-sm">
-                <h3 className="text-[31px] font-medium text-[#292524]">Moderation Actions</h3>
+                <h3 className="text-[24px] font-medium text-[#292524] sm:text-[31px]">Moderation Actions</h3>
                 <div className="mt-3 space-y-2">
                   <button
                     onClick={() => detail && moderateRow(detail.article.id, 'REMOVE')}
@@ -307,7 +314,7 @@ export default function AdminModerationPage() {
                   <button
                     onClick={() => detail && moderateRow(detail.article.id, 'SUSPEND')}
                     disabled={!detail || actionBusy !== null}
-                    className="w-full rounded border border-[#FCA5A5] px-2 py-2 text-[10px] font-bold text-[#B91C1C] disabled:opacity-60"
+                    className="w-full rounded border border-[#FCA5A5] px-2 py-2 text-[10px] font-bold text-[#B91C1C] disabled:opacity-60 sm:hidden"
                   >
                     {actionBusy === 'SUSPEND' ? '...' : 'Suspend Publisher'}
                   </button>

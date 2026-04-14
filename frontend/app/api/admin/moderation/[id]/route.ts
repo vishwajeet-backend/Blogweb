@@ -2,6 +2,18 @@ import { NextRequest, NextResponse } from 'next/server';
 import prisma from '@/lib/prisma';
 import { authService } from '@/lib/services/auth.service';
 
+function extractArticleId(metadata: any): string | null {
+  if (!metadata || typeof metadata !== 'object') return null;
+  const value = (metadata as Record<string, unknown>).articleId;
+  return typeof value === 'string' ? value : null;
+}
+
+function extractString(metadata: any, key: string): string | null {
+  if (!metadata || typeof metadata !== 'object') return null;
+  const value = (metadata as Record<string, unknown>)[key];
+  return typeof value === 'string' ? value : null;
+}
+
 async function requireAdmin(request: NextRequest) {
   const authHeader = request.headers.get('authorization');
 
@@ -60,6 +72,34 @@ export async function PATCH(
       publishedAt: null as Date | null,
     };
 
+    const reviewDecisionMap: Record<string, string> = {
+      WARN: 'WARN',
+      APPROVE: 'APPROVE',
+      ARCHIVE: 'ARCHIVE',
+      REMOVE: 'REMOVE',
+      SUSPEND: 'SUSPEND',
+      RESTORE: 'RESTORE',
+    };
+
+    const logReportReview = async (decision: string) => {
+      await prisma.activityLog.create({
+        data: {
+          userId: adminUser.id,
+          blogId: existing.blogId || undefined,
+          action: 'ADMIN_REVIEW_BLOG_REPORT',
+          metadata: {
+            articleId: existing.id,
+            articleTitle: existing.title,
+            decision,
+            targetUserId: existing.userId,
+            note: note || undefined,
+          },
+          ipAddress,
+          userAgent,
+        },
+      });
+    };
+
     if (action === 'WARN') {
       await prisma.activityLog.create({
         data: {
@@ -76,6 +116,8 @@ export async function PATCH(
           userAgent,
         },
       });
+
+      await logReportReview(reviewDecisionMap[action]);
 
       return NextResponse.json({
         success: true,
@@ -118,6 +160,8 @@ export async function PATCH(
         },
       });
 
+      await logReportReview(reviewDecisionMap[action]);
+
       return NextResponse.json({
         success: true,
         data: { article: removed },
@@ -126,25 +170,46 @@ export async function PATCH(
     }
 
     if (action === 'SUSPEND') {
-      await prisma.user.update({
-        where: { id: existing.userId },
-        data: {
-          subscriptionStatus: 'CANCELLED',
-        },
+      const suspensionResult = await prisma.$transaction(async (tx) => {
+        await tx.user.update({
+          where: { id: existing.userId },
+          data: {
+            subscriptionStatus: 'CANCELLED',
+          },
+        });
+
+        await tx.platformConnection.updateMany({
+          where: { userId: existing.userId },
+          data: { status: 'DISCONNECTED' },
+        });
+
+        await tx.article.updateMany({
+          where: {
+            userId: existing.userId,
+            deletedAt: null,
+          },
+          data: {
+            status: 'ARCHIVED',
+            isPublicOnPublishType: false,
+          },
+        });
+
+        return tx.article.findUnique({
+          where: { id },
+          select: {
+            id: true,
+            title: true,
+            status: true,
+            publishedAt: true,
+          },
+        });
       });
 
-      updated = await prisma.article.update({
-        where: { id },
-        data: {
-          status: 'ARCHIVED',
-        },
-        select: {
-          id: true,
-          title: true,
-          status: true,
-          publishedAt: true,
-        },
-      });
+      if (!suspensionResult) {
+        return NextResponse.json({ success: false, error: 'Article not found after suspension' }, { status: 404 });
+      }
+
+      updated = suspensionResult;
 
       await prisma.activityLog.create({
         data: {
@@ -164,10 +229,12 @@ export async function PATCH(
         },
       });
 
+      await logReportReview(reviewDecisionMap[action]);
+
       return NextResponse.json({
         success: true,
         data: { article: updated },
-        message: 'Publisher suspended and article archived',
+        message: 'Publisher suspended and all creator blogs archived',
       });
     }
 
@@ -208,6 +275,8 @@ export async function PATCH(
         userAgent,
       },
     });
+
+    await logReportReview(reviewDecisionMap[action]);
 
     return NextResponse.json({
       success: true,
@@ -264,16 +333,42 @@ export async function GET(
 
     const caseNumber = `#${article.id.replace(/-/g, '').slice(0, 4).toUpperCase()}`;
 
+    const [reportLogs, reviewLogs] = await Promise.all([
+      prisma.activityLog.findMany({
+        where: { action: 'BLOG_REPORT_SUBMITTED' },
+        select: { metadata: true, createdAt: true },
+        orderBy: { createdAt: 'desc' },
+        take: 1200,
+      }),
+      prisma.activityLog.findMany({
+        where: { action: 'ADMIN_REVIEW_BLOG_REPORT' },
+        select: { metadata: true, createdAt: true },
+        orderBy: { createdAt: 'desc' },
+        take: 1200,
+      }),
+    ]);
+
+    const articleReports = reportLogs.filter((log) => extractArticleId(log.metadata) === article.id);
+    const latestReport = articleReports[0];
+    const latestReview = reviewLogs.find((log) => extractArticleId(log.metadata) === article.id);
+
+    const latestReviewDecision = extractString(latestReview?.metadata, 'decision');
+    const isPendingReview = Boolean(latestReport) && (!latestReview || latestReport.createdAt > latestReview.createdAt);
+
+    const reportReason = extractString(latestReport?.metadata, 'reason') || 'Reported Content';
+    const reportDetails = extractString(latestReport?.metadata, 'details');
+    const reportedBy = extractString(latestReport?.metadata, 'reporterName') || 'community_user';
+
     return NextResponse.json({
       success: true,
       data: {
         article,
         caseNumber,
         flag: {
-          reason: 'Spam / Misleading',
-          reportedBy: 'user_report',
-          date: article.updatedAt,
-          status: article.status === 'PUBLISHED' ? 'PENDING REVIEW' : article.status,
+          reason: reportDetails ? `${reportReason} · ${reportDetails}` : reportReason,
+          reportedBy,
+          date: latestReport?.createdAt || article.updatedAt,
+          status: isPendingReview ? 'PENDING REVIEW' : latestReviewDecision || article.status,
         },
       },
     });

@@ -86,11 +86,11 @@ const stats = [
 ]
 
 const faqs = [
-  "What is AIMy Blogs?",
-  "Do I need writing experience to use AIMy Blogs?",
+  "What is My AI Blogs?",
+  "Do I need writing experience to use My AI Blogs?",
   "Can I publish directly to WordPress or Medium?",
-  "Does AIMy Blogs support SEO optimization?",
-  "Can I generate blog images using AIMy Blogs?",
+  "Does My AI Blogs support SEO optimization?",
+  "Can I generate blog images using My AI Blogs?",
   "Can I monitor or improve my existing blog content?",
 ]
 
@@ -138,7 +138,7 @@ export default function Home() {
               Across Every <span className="font-medium italic text-[#6a6a6a]">Platform</span>
             </h1>
             <p className="mx-auto mt-4 max-w-[820px] text-sm font-medium text-[#4d4d4d] md:text-base">
-              AIMy Blogs helps creators and teams generate, optimize, and publish high-quality content in minutes.
+              My AI Blogs helps creators and teams generate, optimize, and publish high-quality content in minutes.
               From SEO plus images to scheduling and analytics, everything stays in one workflow.
             </p>
             <div className="mt-7 flex flex-wrap items-center justify-center gap-3">
@@ -163,7 +163,7 @@ export default function Home() {
       <section className="px-4 py-12 md:px-8 lg:px-12">
         <div className="mx-auto max-w-[1360px] rounded-[30px] bg-gradient-to-b from-[rgba(255,240,230,0.2)] to-[rgba(254,207,177,0.45)] px-5 py-9 md:px-8 md:py-10">
           <h2 className="mx-auto max-w-[920px] text-center text-3xl font-bold leading-tight text-[#1e1e1e] md:text-5xl">
-            AIMy Blogs Captures Every Content Detail <span className="font-medium italic text-[#4d4d4d]">Automatically</span>
+            My AI Blogs Captures Every Content Detail <span className="font-medium italic text-[#4d4d4d]">Automatically</span>
           </h2>
           <div className="mt-7 grid gap-4 md:grid-cols-2 xl:grid-cols-4">
             {steps.map((step) => (

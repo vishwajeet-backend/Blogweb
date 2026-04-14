@@ -2,6 +2,12 @@ import { NextRequest, NextResponse } from 'next/server';
 import prisma from '@/lib/prisma';
 import { authService } from '@/lib/services/auth.service';
 
+function extractArticleId(metadata: any): string | null {
+  if (!metadata || typeof metadata !== 'object') return null;
+  const value = (metadata as Record<string, unknown>).articleId;
+  return typeof value === 'string' ? value : null;
+}
+
 async function requireAdmin(request: NextRequest) {
   const authHeader = request.headers.get('authorization');
 
@@ -30,21 +36,66 @@ export async function GET(request: NextRequest) {
     const search = (searchParams.get('search') || '').trim();
     const skip = (Math.max(page, 1) - 1) * Math.max(limit, 1);
 
-    const where: any = {
-      deletedAt: null,
-    };
+    const [reportLogs, reviewLogs] = await Promise.all([
+      prisma.activityLog.findMany({
+        where: { action: 'BLOG_REPORT_SUBMITTED' },
+        select: { metadata: true, createdAt: true },
+        orderBy: { createdAt: 'desc' },
+        take: 1200,
+      }),
+      prisma.activityLog.findMany({
+        where: { action: 'ADMIN_REVIEW_BLOG_REPORT' },
+        select: { metadata: true, createdAt: true },
+        orderBy: { createdAt: 'desc' },
+        take: 1200,
+      }),
+    ]);
 
-    if (status !== 'ALL') {
+    const latestReviewByArticle = new Map<string, Date>();
+    for (const log of reviewLogs) {
+      const articleId = extractArticleId(log.metadata);
+      if (!articleId) continue;
+      const known = latestReviewByArticle.get(articleId);
+      if (!known || log.createdAt > known) latestReviewByArticle.set(articleId, log.createdAt);
+    }
+
+    const pendingReportedIds = new Set<string>();
+    for (const log of reportLogs) {
+      const articleId = extractArticleId(log.metadata);
+      if (!articleId) continue;
+      const reviewDate = latestReviewByArticle.get(articleId);
+      if (!reviewDate || log.createdAt > reviewDate) {
+        pendingReportedIds.add(articleId);
+      }
+    }
+
+    const where: any = { deletedAt: null };
+
+    if (status === 'PENDING') {
+      const reportedIds = Array.from(pendingReportedIds);
+      where.OR = [
+        { status: { in: ['DRAFT', 'SCHEDULED'] } },
+        ...(reportedIds.length ? [{ id: { in: reportedIds } }] : []),
+      ];
+    } else if (status !== 'ALL') {
       where.status = status;
     }
 
     if (search) {
-      where.OR = [
-        { title: { contains: search, mode: 'insensitive' } },
-        { excerpt: { contains: search, mode: 'insensitive' } },
-        { user: { name: { contains: search, mode: 'insensitive' } } },
-        { user: { email: { contains: search, mode: 'insensitive' } } },
-      ];
+      const searchClause = {
+        OR: [
+          { title: { contains: search, mode: 'insensitive' } },
+          { excerpt: { contains: search, mode: 'insensitive' } },
+          { user: { name: { contains: search, mode: 'insensitive' } } },
+          { user: { email: { contains: search, mode: 'insensitive' } } },
+        ],
+      };
+
+      if (where.OR) {
+        where.AND = [searchClause];
+      } else {
+        Object.assign(where, searchClause);
+      }
     }
 
     const [articles, total] = await Promise.all([

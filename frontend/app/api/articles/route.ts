@@ -24,20 +24,25 @@ export async function GET(request: NextRequest) {
     const offset = parseInt(searchParams.get('offset') || '0');
     const status = searchParams.get('status');
     const folderId = searchParams.get('folderId');
+    const scope = (searchParams.get('scope') || 'workspace').toLowerCase();
 
     const where: any = {
       deletedAt: null,
-      OR: [
-        { userId: currentUser.id },
-        {
-          collaborators: {
-            some: {
-              userId: currentUser.id,
-              status: { in: ['ACCEPTED', 'PENDING'] }
-            }
-          }
-        }
-      ]
+      ...(scope === 'mine'
+        ? { userId: currentUser.id }
+        : {
+            OR: [
+              { userId: currentUser.id },
+              {
+                collaborators: {
+                  some: {
+                    userId: currentUser.id,
+                    status: { in: ['ACCEPTED', 'PENDING'] }
+                  }
+                }
+              }
+            ]
+          }),
     };
 
     if (status) {
@@ -59,6 +64,7 @@ export async function GET(request: NextRequest) {
         orderBy: { createdAt: 'desc' },
         select: {
           id: true,
+          userId: true,
           title: true,
           slug: true,
           excerpt: true,

@@ -125,6 +125,7 @@ export async function GET(request: NextRequest) {
     const totals = {
       views: 0,
       uniqueVisitors: 0,
+      clicks: 0,
       likes: 0,
       comments: 0,
       shares: 0,
@@ -145,8 +146,10 @@ export async function GET(request: NextRequest) {
     Object.values(publishTypeByArticle).forEach((a: any) => {
       totals.views += a.totalViews;
       totals.uniqueVisitors += a.totalUniqueVisitors;
+      totals.clicks += a.totalClicks;
       totals.shares += a.totalShares;
       totals.comments += a.totalComments;
+      totals.likes += a.totalClicks;
     });
 
     // Group by platform
@@ -175,7 +178,7 @@ export async function GET(request: NextRequest) {
       byPlatform['PUBLISHTYPE'] = {
         platform: 'PUBLISHTYPE',
         totalViews: Object.values(publishTypeByArticle).reduce((sum: number, a: any) => sum + a.totalViews, 0),
-        totalLikes: 0, // PublishType doesn't have likes yet
+        totalLikes: Object.values(publishTypeByArticle).reduce((sum: number, a: any) => sum + a.totalClicks, 0),
         totalComments: Object.values(publishTypeByArticle).reduce((sum: number, a: any) => sum + a.totalComments, 0),
         articles: Object.keys(publishTypeByArticle).length,
       };
@@ -224,11 +227,12 @@ export async function GET(request: NextRequest) {
         };
       }
       byArticle[a.articleId].totalViews += a.totalViews;
+      byArticle[a.articleId].totalLikes += a.totalClicks;
       byArticle[a.articleId].totalComments += a.totalComments;
       byArticle[a.articleId].platforms.push({
         platform: 'PUBLISHTYPE',
         views: a.totalViews,
-        likes: 0,
+        likes: a.totalClicks,
         comments: a.totalComments,
         url: `/blog/${a.article.slug}`,
       });

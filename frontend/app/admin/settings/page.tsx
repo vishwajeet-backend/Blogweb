@@ -2,7 +2,7 @@
 
 import { useEffect, useMemo, useState } from 'react';
 import { useRouter } from 'next/navigation';
-import { Link2, Loader2, Moon, Save } from 'lucide-react';
+import { Link2, Loader2, Save } from 'lucide-react';
 import { useAuth } from '@/lib/context/AuthContext';
 import { AdminNavTabs } from '@/components/layout/admin-nav-tabs';
 
@@ -29,18 +29,6 @@ type FormState = {
   linkedinUrl: string;
   avatar: string;
 };
-
-const sideNav = [
-  'Profile',
-  'Account',
-  'Billing & Plans',
-  'Integrations',
-  'Team & Permissions',
-  'Notifications',
-  'Privacy & Security',
-  'Appearance',
-  'API & Webhooks',
-];
 
 export default function AdminSettingsPage() {
   const { user, loading } = useAuth();
@@ -140,34 +128,17 @@ export default function AdminSettingsPage() {
 
   return (
     <div className="min-h-screen bg-[#FAF9F6]" style={{ fontFamily: 'Satoshi, var(--font-geist-sans), sans-serif' }}>
-      <div className="mx-auto flex max-w-[1320px] flex-col lg:flex-row">
-        <aside className="w-full border-b border-[#E7E5E4] bg-[#FFFEFD] px-4 py-6 lg:sticky lg:top-0 lg:h-screen lg:w-[250px] lg:border-b-0 lg:border-r lg:px-6 lg:py-8">
-          <p className="text-[34px] font-black uppercase tracking-[-0.04em] text-[#FB6503]">LOGOIPSUM</p>
-          <div className="mt-6 grid grid-cols-2 gap-2 lg:mt-8 lg:block lg:space-y-2">
-            {sideNav.map((item) => (
-              <button
-                key={item}
-                className={`w-full rounded-[8px] px-3 py-2 text-left text-[16px] ${
-                  item === 'Profile' ? 'bg-[#FB6503] text-white' : 'text-[#57534D] hover:bg-[#F5F5F4]'
-                }`}
-              >
-                {item}
-              </button>
-            ))}
-          </div>
-          <div className="mt-6 border-t border-[#E7E5E4] pt-4 text-[16px] text-[#E11D48] lg:mt-8 lg:pt-5">Danger Zone</div>
-        </aside>
+      <div className="mx-auto max-w-[980px] px-3 py-5 sm:px-4 md:px-6">
+        <div className="flex items-center justify-between border-b border-[#E7E5E4] pb-3">
+          <p className="text-[22px] font-bold text-[#1C1917]">Admin Panel</p>
+        </div>
 
-        <main className="flex-1 px-4 py-6 md:px-6 lg:px-8 lg:py-10">
-          <div className="flex items-start justify-between gap-3">
-            <div>
-              <h1 className="text-[39px] font-bold text-[#1C1917]">Profile Settings</h1>
-              <p className="mt-1 text-[20px] font-bold text-[#79716B]">Manage your personal information and public presence.</p>
-              <AdminNavTabs />
-            </div>
-            <button className="rounded-full p-2 text-[#78716C] hover:bg-[#F3F4F6]" aria-label="theme">
-              <Moon className="h-4 w-4" />
-            </button>
+        <AdminNavTabs />
+
+        <main className="mt-2">
+          <div>
+            <h1 className="text-[32px] font-bold text-[#1C1917]">Profile Settings</h1>
+            <p className="mt-1 text-[16px] font-medium text-[#79716B]">Manage your personal information and public presence.</p>
           </div>
 
           {error && <div className="mt-4 rounded border border-[#FECACA] bg-[#FEF2F2] px-3 py-2 text-sm text-[#B91C1C]">{error}</div>}
@@ -176,11 +147,11 @@ export default function AdminSettingsPage() {
           {loadingData ? (
             <div className="mt-10 text-[#6A6A6A]"><Loader2 className="mr-2 inline h-4 w-4 animate-spin" />Loading profile...</div>
           ) : (
-            <div className="mt-6 space-y-8 rounded-[10px] border border-[#E7E5E4] bg-[#FAF9F6] p-6">
+            <div className="mt-5 space-y-8 rounded-[10px] border border-[#E7E5E4] bg-[#FAF9F6] p-4 sm:p-6">
               <section className="grid gap-6 border-b border-[#E7E5E4] pb-8 md:grid-cols-[220px_1fr]">
                 <div>
-                  <h2 className="text-[31px] font-medium text-[#1C1917]">Profile Picture</h2>
-                  <p className="mt-1 text-[16px] text-[#79716B]">This will be displayed on your public profile.</p>
+                  <h2 className="text-[22px] font-medium text-[#1C1917] sm:text-[24px] md:text-[31px]">Profile Picture</h2>
+                  <p className="mt-1 text-[14px] text-[#79716B] md:text-[16px]">This will be displayed on your public profile.</p>
                 </div>
                 <div className="flex flex-wrap items-center gap-4">
                   {form.avatar ? (
@@ -191,21 +162,25 @@ export default function AdminSettingsPage() {
                     </div>
                   )}
                   <div className="flex-1">
+                    <div className="flex flex-wrap items-center gap-2">
+                      <button className="rounded-[8px] bg-[#FB6503] px-4 py-2 text-sm font-medium text-white">Upload New</button>
+                      <button className="rounded-[8px] border border-[#D6D3D1] bg-white px-4 py-2 text-sm text-[#44403B]">Remove</button>
+                    </div>
                     <input
                       value={form.avatar}
                       onChange={(e) => setForm((prev) => ({ ...prev, avatar: e.target.value }))}
                       placeholder="Avatar URL"
-                      className="w-full rounded-[8px] border border-[#D6D3D1] bg-white px-3 py-2 text-[16px] text-[#1C1917] outline-none"
+                      className="mt-3 w-full rounded-[8px] border border-[#D6D3D1] bg-white px-3 py-2 text-[14px] text-[#1C1917] outline-none"
                     />
-                    <p className="mt-2 text-[16px] text-[#79716B]">JPG, GIF or PNG. Max size of 800K</p>
+                    <p className="mt-2 text-[13px] text-[#79716B]">JPG, GIF or PNG. Max size of 800K</p>
                   </div>
                 </div>
               </section>
 
               <section className="grid gap-6 border-b border-[#E7E5E4] pb-8 md:grid-cols-[220px_1fr]">
                 <div>
-                  <h2 className="text-[31px] font-medium text-[#1C1917]">Personal Information</h2>
-                  <p className="mt-1 text-[16px] text-[#79716B]">Update your basic personal details.</p>
+                  <h2 className="text-[22px] font-medium text-[#1C1917] sm:text-[24px] md:text-[31px]">Personal Information</h2>
+                  <p className="mt-1 text-[14px] text-[#79716B] md:text-[16px]">Update your basic personal details.</p>
                 </div>
                 <div className="space-y-4">
                   <div className="grid gap-4 md:grid-cols-2">
@@ -228,8 +203,8 @@ export default function AdminSettingsPage() {
 
               <section className="grid gap-6 border-b border-[#E7E5E4] pb-8 md:grid-cols-[220px_1fr]">
                 <div>
-                  <h2 className="text-[31px] font-medium text-[#1C1917]">Social Profiles</h2>
-                  <p className="mt-1 text-[16px] text-[#79716B]">Where can people find you online?</p>
+                  <h2 className="text-[22px] font-medium text-[#1C1917] sm:text-[24px] md:text-[31px]">Social Profiles</h2>
+                  <p className="mt-1 text-[14px] text-[#79716B] md:text-[16px]">Where can people find you online?</p>
                 </div>
                 <div className="space-y-4">
                   <LabeledInput label="Website" value={form.website} onChange={(value) => setForm((prev) => ({ ...prev, website: value }))} placeholder="https://www.example.com" />
@@ -242,8 +217,8 @@ export default function AdminSettingsPage() {
 
               <section className="grid gap-6 md:grid-cols-[220px_1fr]">
                 <div>
-                  <h2 className="text-[31px] font-medium text-[#1C1917]">Public Profile</h2>
-                  <p className="mt-1 text-[16px] text-[#79716B]">Control your profile URL and visibility.</p>
+                  <h2 className="text-[22px] font-medium text-[#1C1917] sm:text-[24px] md:text-[31px]">Public Profile</h2>
+                  <p className="mt-1 text-[14px] text-[#79716B] md:text-[16px]">Control your profile URL and visibility.</p>
                 </div>
                 <div className="space-y-3">
                   <LabeledInput
@@ -251,7 +226,7 @@ export default function AdminSettingsPage() {
                     value={`${profile?.email || ''}@${form.firstName || 'user'}.${form.lastName || 'name'}`.toLowerCase()}
                     disabled
                   />
-                  <button className="inline-flex items-center gap-2 text-[16px] text-[#57534D]">
+                  <button className="inline-flex items-center gap-2 text-[14px] text-[#57534D] sm:text-[16px]">
                     <Link2 className="h-4 w-4" /> Preview public profile
                   </button>
                   <div className="rounded-[8px] border border-[#E7E5E4] bg-white px-3 py-3">
@@ -261,14 +236,14 @@ export default function AdminSettingsPage() {
                 </div>
               </section>
 
-              <div className="flex justify-end gap-2 border-t border-[#E7E5E4] pt-6">
-                <button onClick={() => router.push('/admin')} className="rounded-[8px] border border-[#D6D3D1] bg-white px-4 py-2 text-[16px] text-[#44403B]">
+              <div className="flex flex-col-reverse justify-end gap-2 border-t border-[#E7E5E4] pt-6 sm:flex-row">
+                <button onClick={() => router.push('/admin')} className="rounded-[8px] border border-[#D6D3D1] bg-white px-4 py-2 text-[14px] text-[#44403B] sm:text-[16px]">
                   Cancel
                 </button>
                 <button
                   onClick={onSave}
                   disabled={saving}
-                  className="inline-flex items-center gap-2 rounded-[8px] bg-[#FB6503] px-4 py-2 text-[16px] font-medium text-white disabled:opacity-60"
+                  className="inline-flex items-center justify-center gap-2 rounded-[8px] bg-[#FB6503] px-4 py-2 text-[14px] font-medium text-white disabled:opacity-60 sm:text-[16px]"
                 >
                   {saving ? <Loader2 className="h-4 w-4 animate-spin" /> : <Save className="h-4 w-4" />} Save Changes
                 </button>

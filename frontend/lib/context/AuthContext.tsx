@@ -114,7 +114,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       await fetchUser()
 
       toast.success('Logged in successfully!')
-      router.push(loggedInUser?.role === 'ADMIN' ? '/admin/users' : '/dashboard')
+      router.replace(loggedInUser?.role === 'ADMIN' ? '/admin/users' : '/dashboard')
     } catch (error: any) {
       toast.error(error.message || 'An error occurred')
       throw error

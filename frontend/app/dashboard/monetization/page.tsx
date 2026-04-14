@@ -1,253 +1,271 @@
+"use client"
+
+import { useEffect, useMemo, useState } from "react"
+import { useRouter } from "next/navigation"
 import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import { Badge } from "@/components/ui/badge"
-import {
-  DollarSign,
-  TrendingUp,
-  CreditCard,
-  ExternalLink,
-  Zap,
-  Users,
-  Gift,
-  Settings
-} from "lucide-react"
+import { Loader2, CreditCard, Zap, TrendingUp, Eye, Send, Layers, Calendar } from "lucide-react"
+import { useAuth } from "@/lib/context/AuthContext"
+import { toast } from "sonner"
+
+type SubscriptionUsage = {
+  plan: string
+  articlesThisMonth: number
+  maxArticlesPerMonth: number
+  drafts: number
+  maxDrafts: number
+  platformConnections: number
+  maxPlatformConnections: number
+  isOverLimit: boolean
+}
+
+type UserStats = {
+  articles?: {
+    total: number
+    published: number
+    draft: number
+    totalViews: number
+  }
+  platforms?: {
+    connected: number
+    publishingRate: number
+  }
+  recentActivity?: {
+    platformPublishes: number
+  }
+}
+
+type CurrentUser = {
+  subscriptionPlan?: string
+  subscriptionStatus?: string
+}
+
+function progressPercent(value: number, max: number) {
+  if (max <= 0) return 0
+  return Math.min(100, Math.round((value / max) * 100))
+}
+
+function planBadgeVariant(plan?: string): "default" | "secondary" | "destructive" | "outline" | "success" {
+  if (plan === "PROFESSIONAL") return "success"
+  if (plan === "CREATOR") return "default"
+  if (plan === "STARTER") return "secondary"
+  return "outline"
+}
 
 export default function MonetizationPage() {
+  const { user } = useAuth()
+  const router = useRouter()
+
+  const [loading, setLoading] = useState(true)
+  const [usage, setUsage] = useState<SubscriptionUsage | null>(null)
+  const [stats, setStats] = useState<UserStats | null>(null)
+  const [currentUser, setCurrentUser] = useState<CurrentUser | null>(null)
+
+  useEffect(() => {
+    if (user) {
+      fetchData()
+    }
+  }, [user])
+
+  async function fetchData() {
+    try {
+      setLoading(true)
+      const token = localStorage.getItem("accessToken")
+
+      const [usageRes, statsRes, meRes] = await Promise.all([
+        fetch("/api/user/subscription-usage", { headers: { Authorization: `Bearer ${token}` } }),
+        fetch("/api/user/stats", { headers: { Authorization: `Bearer ${token}` } }),
+        fetch("/api/auth/me", { headers: { Authorization: `Bearer ${token}` } }),
+      ])
+
+      if (usageRes.ok) {
+        const usageData = await usageRes.json()
+        setUsage(usageData?.data || null)
+      }
+
+      if (statsRes.ok) {
+        const statsData = await statsRes.json()
+        setStats(statsData?.data || null)
+      }
+
+      if (meRes.ok) {
+        const meData = await meRes.json()
+        setCurrentUser(meData?.data?.user || null)
+      }
+    } catch (error) {
+      console.error("Failed to load monetization data", error)
+      toast.error("Failed to load monetization data")
+    } finally {
+      setLoading(false)
+    }
+  }
+
+  const limits = useMemo(() => {
+    const articlesUsed = usage?.articlesThisMonth || 0
+    const draftsUsed = usage?.drafts || 0
+    const connectionsUsed = usage?.platformConnections || 0
+
+    const maxArticles = usage?.maxArticlesPerMonth || 0
+    const maxDrafts = usage?.maxDrafts || 0
+    const maxConnections = usage?.maxPlatformConnections || 0
+
+    return {
+      articlesUsed,
+      draftsUsed,
+      connectionsUsed,
+      maxArticles,
+      maxDrafts,
+      maxConnections,
+      articlesPct: maxArticles === -1 ? 0 : progressPercent(articlesUsed, maxArticles),
+      draftsPct: maxDrafts === -1 ? 0 : progressPercent(draftsUsed, maxDrafts),
+      connectionsPct: maxConnections === -1 ? 0 : progressPercent(connectionsUsed, maxConnections),
+    }
+  }, [usage])
+
+  if (loading) {
+    return (
+      <div className="flex min-h-[60vh] items-center justify-center p-8">
+        <Loader2 className="h-8 w-8 animate-spin text-neutral-500" />
+      </div>
+    )
+  }
+
   return (
     <div className="p-8">
-      <div className="mb-8">
-        <h1 className="text-3xl font-bold">Monetization</h1>
-        <p className="text-neutral-600 mt-1">Turn your content into revenue</p>
+      <div className="mb-8 flex flex-wrap items-center justify-between gap-3">
+        <div>
+          <h1 className="text-3xl font-bold">Monetization & Plan Usage</h1>
+          <p className="mt-1 text-neutral-600">Live subscription, publishing, and growth metrics from your account</p>
+        </div>
+        <div className="flex items-center gap-2">
+          <Badge variant={planBadgeVariant(currentUser?.subscriptionPlan)}>
+            {currentUser?.subscriptionPlan || usage?.plan || "FREE"}
+          </Badge>
+          <Badge variant="outline">{currentUser?.subscriptionStatus || "ACTIVE"}</Badge>
+        </div>
       </div>
 
-      {/* Earnings Overview */}
-      <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-4 mb-8">
+      <div className="mb-8 grid gap-6 md:grid-cols-2 lg:grid-cols-4">
         <Card>
           <CardHeader className="flex flex-row items-center justify-between pb-2">
-            <CardTitle className="text-sm font-medium">Total Earnings</CardTitle>
-            <DollarSign className="h-4 w-4 text-neutral-600" />
+            <CardTitle className="text-sm font-medium">Total Views</CardTitle>
+            <Eye className="h-4 w-4 text-neutral-600" />
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold">₹1,94,635</div>
-            <p className="text-xs text-neutral-600 mt-1">
-              <span className="text-green-600">+12.5%</span> from last month
-            </p>
+            <div className="text-2xl font-bold">{(stats?.articles?.totalViews || 0).toLocaleString()}</div>
+            <p className="mt-1 text-xs text-neutral-600">Across all articles</p>
           </CardContent>
         </Card>
 
         <Card>
           <CardHeader className="flex flex-row items-center justify-between pb-2">
-            <CardTitle className="text-sm font-medium">This Month</CardTitle>
+            <CardTitle className="text-sm font-medium">Published Articles</CardTitle>
+            <Send className="h-4 w-4 text-neutral-600" />
+          </CardHeader>
+          <CardContent>
+            <div className="text-2xl font-bold">{(stats?.articles?.published || 0).toLocaleString()}</div>
+            <p className="mt-1 text-xs text-neutral-600">Total published content</p>
+          </CardContent>
+        </Card>
+
+        <Card>
+          <CardHeader className="flex flex-row items-center justify-between pb-2">
+            <CardTitle className="text-sm font-medium">Connected Platforms</CardTitle>
+            <Layers className="h-4 w-4 text-neutral-600" />
+          </CardHeader>
+          <CardContent>
+            <div className="text-2xl font-bold">{(stats?.platforms?.connected || usage?.platformConnections || 0).toLocaleString()}</div>
+            <p className="mt-1 text-xs text-neutral-600">Active publishing channels</p>
+          </CardContent>
+        </Card>
+
+        <Card>
+          <CardHeader className="flex flex-row items-center justify-between pb-2">
+            <CardTitle className="text-sm font-medium">30d Publishes</CardTitle>
             <TrendingUp className="h-4 w-4 text-neutral-600" />
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold">₹40,421</div>
-            <p className="text-xs text-neutral-600 mt-1">
-              15 days remaining
-            </p>
-          </CardContent>
-        </Card>
-
-        <Card>
-          <CardHeader className="flex flex-row items-center justify-between pb-2">
-            <CardTitle className="text-sm font-medium">Subscribers</CardTitle>
-            <Users className="h-4 w-4 text-neutral-600" />
-          </CardHeader>
-          <CardContent>
-            <div className="text-2xl font-bold">142</div>
-            <p className="text-xs text-neutral-600 mt-1">
-              <span className="text-green-600">+8</span> this month
-            </p>
-          </CardContent>
-        </Card>
-
-        <Card>
-          <CardHeader className="flex flex-row items-center justify-between pb-2">
-            <CardTitle className="text-sm font-medium">Conversion Rate</CardTitle>
-            <Zap className="h-4 w-4 text-neutral-600" />
-          </CardHeader>
-          <CardContent>
-            <div className="text-2xl font-bold">3.2%</div>
-            <p className="text-xs text-neutral-600 mt-1">
-              Average across platforms
-            </p>
+            <div className="text-2xl font-bold">{(stats?.recentActivity?.platformPublishes || 0).toLocaleString()}</div>
+            <p className="mt-1 text-xs text-neutral-600">Platform publish events</p>
           </CardContent>
         </Card>
       </div>
 
-      {/* Monetization Methods */}
-      <div className="grid gap-6 lg:grid-cols-2 mb-8">
+      <div className="mb-8 grid gap-6 lg:grid-cols-3">
         <Card>
           <CardHeader>
-            <div className="flex items-center justify-between">
-              <div>
-                <CardTitle>Subscriptions</CardTitle>
-                <CardDescription>Monthly recurring revenue from subscribers</CardDescription>
-              </div>
-              <Badge variant="success">Active</Badge>
-            </div>
+            <CardTitle className="flex items-center gap-2">
+              <Zap className="h-4 w-4" />
+              Monthly Article Usage
+            </CardTitle>
+            <CardDescription>Articles created in the current billing month</CardDescription>
           </CardHeader>
           <CardContent>
-            <div className="space-y-4">
-              <div className="flex items-center justify-between p-4 bg-neutral-50 rounded-lg">
-                <div>
-                  <p className="font-medium">Monthly Subscription</p>
-                  <p className="text-sm text-neutral-600">₹829/month</p>
-                </div>
-                <div className="text-right">
-                  <p className="font-bold">124 subscribers</p>
-                  <p className="text-sm text-neutral-600">₹1,02,754/mo</p>
-                </div>
-              </div>
-              <div className="flex items-center justify-between p-4 bg-neutral-50 rounded-lg">
-                <div>
-                  <p className="font-medium">Annual Subscription</p>
-                  <p className="text-sm text-neutral-600">₹8,217/year</p>
-                </div>
-                <div className="text-right">
-                  <p className="font-bold">18 subscribers</p>
-                  <p className="text-sm text-neutral-600">₹12,367/mo avg</p>
-                </div>
-              </div>
-              <Button variant="outline" className="w-full gap-2">
-                <Settings className="h-4 w-4" />
-                Manage Pricing
-              </Button>
+            <div className="mb-2 flex items-center justify-between text-sm">
+              <span>{limits.articlesUsed} used</span>
+              <span>{limits.maxArticles === -1 ? "Unlimited" : `${limits.maxArticles} max`}</span>
             </div>
+            {limits.maxArticles !== -1 && (
+              <div className="h-2 rounded bg-neutral-100">
+                <div className="h-2 rounded bg-emerald-500" style={{ width: `${limits.articlesPct}%` }} />
+              </div>
+            )}
           </CardContent>
         </Card>
 
         <Card>
           <CardHeader>
-            <div className="flex items-center justify-between">
-              <div>
-                <CardTitle>Sponsorships</CardTitle>
-                <CardDescription>Partner with brands for sponsored content</CardDescription>
-              </div>
-              <Badge variant="secondary">Available</Badge>
-            </div>
+            <CardTitle className="flex items-center gap-2">
+              <Calendar className="h-4 w-4" />
+              Draft Capacity
+            </CardTitle>
+            <CardDescription>Current draft usage against plan limits</CardDescription>
           </CardHeader>
           <CardContent>
-            <div className="space-y-4">
-              <div className="p-4 border border-dashed border-neutral-200 rounded-lg text-center">
-                <Gift className="h-8 w-8 text-neutral-400 mx-auto mb-2" />
-                <p className="font-medium mb-1">No active sponsorships</p>
-                <p className="text-sm text-neutral-600 mb-4">
-                  Connect with brands that align with your content
-                </p>
-                <Button>Find Sponsors</Button>
-              </div>
+            <div className="mb-2 flex items-center justify-between text-sm">
+              <span>{limits.draftsUsed} drafts</span>
+              <span>{limits.maxDrafts === -1 ? "Unlimited" : `${limits.maxDrafts} max`}</span>
             </div>
+            {limits.maxDrafts !== -1 && (
+              <div className="h-2 rounded bg-neutral-100">
+                <div className="h-2 rounded bg-blue-500" style={{ width: `${limits.draftsPct}%` }} />
+              </div>
+            )}
           </CardContent>
         </Card>
 
         <Card>
           <CardHeader>
-            <div className="flex items-center justify-between">
-              <div>
-                <CardTitle>Affiliate Marketing</CardTitle>
-                <CardDescription>Earn commissions from product recommendations</CardDescription>
-              </div>
-              <Badge variant="success">Active</Badge>
-            </div>
+            <CardTitle className="flex items-center gap-2">
+              <CreditCard className="h-4 w-4" />
+              Integration Capacity
+            </CardTitle>
+            <CardDescription>Connected platforms compared to your plan</CardDescription>
           </CardHeader>
           <CardContent>
-            <div className="space-y-4">
-              <div className="flex items-center justify-between p-4 bg-neutral-50 rounded-lg">
-                <div>
-                  <p className="font-medium">Total Clicks</p>
-                  <p className="text-sm text-neutral-600">This month</p>
-                </div>
-                <p className="text-2xl font-bold">1,234</p>
-              </div>
-              <div className="flex items-center justify-between p-4 bg-neutral-50 rounded-lg">
-                <div>
-                  <p className="font-medium">Conversions</p>
-                  <p className="text-sm text-neutral-600">This month</p>
-                </div>
-                <p className="text-2xl font-bold">42</p>
-              </div>
-              <div className="flex items-center justify-between p-4 bg-neutral-50 rounded-lg">
-                <div>
-                  <p className="font-medium">Commission Earned</p>
-                  <p className="text-sm text-neutral-600">This month</p>
-                </div>
-                <p className="text-2xl font-bold">₹19,422</p>
-              </div>
+            <div className="mb-2 flex items-center justify-between text-sm">
+              <span>{limits.connectionsUsed} connected</span>
+              <span>{limits.maxConnections === -1 ? "Unlimited" : `${limits.maxConnections} max`}</span>
             </div>
-          </CardContent>
-        </Card>
-
-        <Card>
-          <CardHeader>
-            <div className="flex items-center justify-between">
-              <div>
-                <CardTitle>Ad Revenue</CardTitle>
-                <CardDescription>Display ads on your content</CardDescription>
+            {limits.maxConnections !== -1 && (
+              <div className="h-2 rounded bg-neutral-100">
+                <div className="h-2 rounded bg-orange-500" style={{ width: `${limits.connectionsPct}%` }} />
               </div>
-              <Badge variant="secondary">Not Active</Badge>
-            </div>
-          </CardHeader>
-          <CardContent>
-            <div className="space-y-4">
-              <p className="text-sm text-neutral-600">
-                Monetize your blog with Google AdSense or other ad networks
-              </p>
-              <div className="p-4 bg-neutral-50 rounded-lg">
-                <p className="text-sm mb-2"><strong>Requirements:</strong></p>
-                <ul className="text-sm text-neutral-600 space-y-1">
-                  <li>• Minimum 10,000 monthly views</li>
-                  <li>• Original content</li>
-                  <li>• Active for at least 3 months</li>
-                </ul>
-              </div>
-              <Button variant="outline" className="w-full">
-                Enable Ad Revenue
-              </Button>
-            </div>
+            )}
           </CardContent>
         </Card>
       </div>
 
-      {/* Payout Settings */}
       <Card>
         <CardHeader>
-          <div className="flex items-center gap-2">
-            <CreditCard className="h-5 w-5" />
-            <CardTitle>Payout Settings</CardTitle>
-          </div>
-          <CardDescription>Manage how you receive your earnings</CardDescription>
+          <CardTitle>Plan Actions</CardTitle>
+          <CardDescription>Manage billing, integrations, and content growth settings</CardDescription>
         </CardHeader>
-        <CardContent>
-          <div className="space-y-4">
-            <div className="flex items-center justify-between p-4 border border-neutral-200 rounded-lg">
-              <div>
-                <p className="font-medium">Available Balance</p>
-                <p className="text-sm text-neutral-600">Ready to withdraw</p>
-              </div>
-              <div className="text-right">
-                <p className="text-2xl font-bold">₹40,421.00</p>
-                <Button size="sm" className="mt-2">Request Payout</Button>
-              </div>
-            </div>
-            <div className="grid gap-4 md:grid-cols-2">
-              <div className="p-4 border border-neutral-200 rounded-lg">
-                <p className="font-medium mb-2">Payout Method</p>
-                <p className="text-sm text-neutral-600">Bank Transfer (ACH)</p>
-                <Button variant="outline" size="sm" className="mt-3 gap-2">
-                  Change Method
-                  <ExternalLink className="h-3 w-3" />
-                </Button>
-              </div>
-              <div className="p-4 border border-neutral-200 rounded-lg">
-                <p className="font-medium mb-2">Payout Schedule</p>
-                <p className="text-sm text-neutral-600">Monthly on the 1st</p>
-                <Button variant="outline" size="sm" className="mt-3">
-                  Change Schedule
-                </Button>
-              </div>
-            </div>
-          </div>
+        <CardContent className="flex flex-wrap gap-3">
+          <Button onClick={() => router.push("/pricing")}>Upgrade Plan</Button>
+          <Button variant="outline" onClick={() => router.push("/dashboard/integrations")}>Manage Integrations</Button>
+          <Button variant="outline" onClick={() => router.push("/dashboard/articles")}>Manage Articles</Button>
         </CardContent>
       </Card>
     </div>

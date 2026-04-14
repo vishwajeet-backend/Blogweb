@@ -25,6 +25,12 @@ type PlatformConnection = {
   lastSyncAt: string
 }
 
+type PlatformPublishMetric = {
+  published: number
+  total: number
+  successRate: number
+}
+
 type PlatformDef = {
   name: string
   type: "CMS" | "BLOGGING" | "SOCIAL MEDIA"
@@ -52,6 +58,7 @@ function IntegrationsContent() {
   const searchParams = useSearchParams()
 
   const [connections, setConnections] = useState<PlatformConnection[]>([])
+  const [platformMetrics, setPlatformMetrics] = useState<Record<string, PlatformPublishMetric>>({})
   const [loading, setLoading] = useState(true)
   const [connectingWordPress, setConnectingWordPress] = useState(false)
   const [connectingWix, setConnectingWix] = useState(false)
@@ -87,13 +94,36 @@ function IntegrationsContent() {
   async function fetchConnections() {
     try {
       const token = localStorage.getItem("accessToken")
-      const response = await fetch("/api/platforms/connections", {
-        headers: { Authorization: `Bearer ${token}` },
-      })
+      const [connectionsResponse, statsResponse] = await Promise.all([
+        fetch("/api/platforms/connections", {
+          headers: { Authorization: `Bearer ${token}` },
+        }),
+        fetch("/api/user/stats", {
+          headers: { Authorization: `Bearer ${token}` },
+        }),
+      ])
 
-      if (response.ok) {
-        const data = await response.json()
+      if (connectionsResponse.ok) {
+        const data = await connectionsResponse.json()
         setConnections(data.data.connections || [])
+      }
+
+      if (statsResponse.ok) {
+        const statsData = await statsResponse.json()
+        const stats = statsData?.data?.platforms?.stats || []
+        const metrics: Record<string, PlatformPublishMetric> = {}
+
+        for (const row of stats) {
+          const total = Number(row.total || 0)
+          const published = Number(row.published || 0)
+          metrics[row.platform] = {
+            published,
+            total,
+            successRate: total > 0 ? Math.round((published / total) * 100) : 0,
+          }
+        }
+
+        setPlatformMetrics(metrics)
       }
     } catch (error) {
       console.error("Error fetching connections:", error)
@@ -269,6 +299,7 @@ function IntegrationsContent() {
             <div className="mt-4 grid grid-cols-1 gap-4 xl:grid-cols-3">
               {connectedPlatforms.slice(0, 3).map((platform) => {
                 const conn = connections.find((item) => item.platform === platform.key)
+                const metric = platformMetrics[platform.key] || { published: 0, successRate: 0, total: 0 }
 
                 if (!conn) return null
 
@@ -296,14 +327,14 @@ function IntegrationsContent() {
                       </div>
                       <div className="flex justify-between">
                         <span className="text-[#4D4D4D]">Article Published</span>
-                        <span className="text-[#212121]">1,248</span>
+                        <span className="text-[#212121]">{metric.published.toLocaleString()}</span>
                       </div>
                     </div>
 
                     <div className="mt-2 h-1.5 rounded-full bg-[#FFFBF7]">
-                      <div className="h-1.5 w-[98%] rounded-full bg-[#FC8435]" />
+                      <div className="h-1.5 rounded-full bg-[#FC8435]" style={{ width: `${Math.max(metric.successRate, 5)}%` }} />
                     </div>
-                    <p className="mt-2 text-right text-base text-[#212121]">98% success rate</p>
+                    <p className="mt-2 text-right text-base text-[#212121]">{metric.successRate}% success rate</p>
 
                     <div className="mt-6 flex items-center gap-2 border-t border-[#E9E9E9] pt-3">
                       <button

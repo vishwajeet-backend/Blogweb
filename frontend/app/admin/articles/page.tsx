@@ -2,10 +2,12 @@
 
 import { useEffect, useMemo, useState } from 'react';
 import { useRouter, useSearchParams } from 'next/navigation';
-import { Bell, ChevronDown, Loader2, Moon, Plus, Search, Sun } from 'lucide-react';
+import { Loader2, Moon, Plus, Search, Sun } from 'lucide-react';
 import { useAuth } from '@/lib/context/AuthContext';
 import { useTheme } from '@/lib/context/ThemeContext';
 import { AdminNavTabs } from '@/components/layout/admin-nav-tabs';
+import { NotificationBell } from '@/components/NotificationBell';
+import { AdminUserMenu } from '@/components/layout/admin-user-menu';
 
 type AdminArticle = {
   id: string;
@@ -197,8 +199,17 @@ export default function AdminArticlesPage() {
     }
   };
 
-  const openModerationWindow = (articleId: string) => {
-    router.push(`/admin/moderation?id=${articleId}`);
+  const openArticle = (articleId: string) => {
+    if (isModerationMode) {
+      router.push(`/admin/moderation?id=${articleId}`);
+      return;
+    }
+
+    const readUrl = `/blog/${articleId}`;
+    const opened = window.open(readUrl, '_blank', 'noopener,noreferrer');
+    if (!opened) {
+      router.push(readUrl);
+    }
   };
 
   const fetchModerationDetail = async (articleId: string) => {
@@ -232,86 +243,84 @@ export default function AdminArticlesPage() {
 
   return (
     <div className="min-h-screen bg-[#FFFEFD]" style={{ fontFamily: 'Satoshi, var(--font-geist-sans), sans-serif' }}>
-      <header className="border-b border-[#E9E9E9] bg-white px-6 py-3">
+      <header className="border-b border-[#E9E9E9] bg-white px-3 py-3 sm:px-4 md:px-6">
         <div className="mx-auto flex max-w-[1220px] items-center justify-between gap-4">
-          <p className="text-[34px] font-black uppercase tracking-[-0.04em] text-[#FB6503]">LOGOIPSUM</p>
+          <p className="text-[22px] font-black uppercase tracking-[-0.04em] text-[#FB6503] sm:text-[26px] md:text-[34px]">LOGOIPSUM</p>
           <div className="hidden w-full max-w-[460px] items-center gap-2 rounded-[28px] border border-[#E45C03] px-3 py-2 md:flex">
             <Search className="h-4 w-4 text-[#999999]" />
             <input placeholder="Search Documentation" className="w-full bg-transparent text-[16px] text-[#212121] outline-none" />
           </div>
-          <div className="flex items-center gap-4 text-[#212121]">
+          <div className="flex items-center gap-3 text-[#212121] md:gap-4">
             <button onClick={toggleTheme}>{isDark ? <Sun className="h-5 w-5" /> : <Moon className="h-5 w-5" />}</button>
-            <Bell className="h-5 w-5" />
-            <div className="text-right">
-              <p className="text-[16px] font-medium">{user.name}</p>
-              <p className="text-[13px] text-[#6A6A6A]">Admin</p>
-            </div>
-            <ChevronDown className="h-4 w-4 text-[#6A6A6A]" />
+            <NotificationBell />
+            <AdminUserMenu name={user.name} />
           </div>
         </div>
       </header>
 
-      <main className="mx-auto max-w-[1220px] px-6 py-6">
+      <main className="mx-auto max-w-[1220px] px-3 py-5 sm:px-4 md:px-6">
         <div className="flex flex-wrap items-start justify-between gap-4">
           <div>
-            <h1 className="text-[39px] font-bold text-[#212121]">{isModerationMode ? 'Content Moderation' : 'All Articles'}</h1>
-            <p className="mt-1 text-[20px] font-bold text-[#6A6A6A]">
+            <h1 className="text-[28px] font-bold text-[#212121] sm:text-[32px] md:text-[39px]">{isModerationMode ? 'Content Moderation' : 'All Articles'}</h1>
+            <p className="mt-1 text-[14px] font-bold text-[#6A6A6A] sm:text-[16px] md:text-[20px]">
               {isModerationMode ? 'Review, warn, archive, restore or remove content.' : 'Manage and moderate content from all publishers.'}
             </p>
             <AdminNavTabs />
           </div>
           <button
             onClick={() => router.push('/dashboard/articles/new')}
-            className="inline-flex items-center gap-2 rounded-[8px] bg-[#FB6503] px-4 py-2 text-[16px] font-medium text-white"
+            className="inline-flex w-full items-center justify-center gap-2 rounded-[8px] bg-[#FB6503] px-4 py-2 text-[14px] font-medium text-white sm:w-auto sm:text-[16px]"
           >
             <Plus className="h-4 w-4" /> NEW ARTICLE
           </button>
         </div>
 
         <section className="mt-5 rounded-[10px] border border-[#E9E9E9] bg-white">
-          <div className="flex flex-wrap items-center gap-3 border-b border-[#F3F4F6] px-4 py-3">
-            <div className="flex min-w-[260px] flex-1 items-center gap-2 rounded-[8px] border border-[#E9E9E9] px-3 py-2">
+          <div className="flex flex-wrap items-center gap-3 border-b border-[#F3F4F6] px-3 py-3 sm:px-4">
+            <div className="flex w-full min-w-0 flex-1 items-center gap-2 rounded-[8px] border border-[#E9E9E9] px-3 py-2 sm:min-w-[260px]">
               <Search className="h-4 w-4 text-[#9CA3AF]" />
               <input
                 value={search}
                 onChange={(e) => setSearch(e.target.value)}
                 onKeyDown={(e) => e.key === 'Enter' && fetchArticles(1)}
                 placeholder="Search by title, keyword..."
-                className="w-full bg-transparent text-[16px] text-[#212121] outline-none"
+                className="w-full bg-transparent text-[14px] text-[#212121] outline-none sm:text-[16px]"
               />
             </div>
 
-            <select value={status} onChange={(e) => setStatus(e.target.value)} className="rounded-[8px] border border-[#E9E9E9] px-3 py-2 text-[16px] text-[#44403B]">
+            <select value={status} onChange={(e) => setStatus(e.target.value)} className="rounded-[8px] border border-[#E9E9E9] px-3 py-2 text-[14px] text-[#44403B] sm:text-[16px]">
               {statusOptions.map((s) => <option key={s} value={s}>Status: {s}</option>)}
             </select>
 
-            <select value={platform} onChange={(e) => setPlatform(e.target.value)} className="rounded-[8px] border border-[#E9E9E9] px-3 py-2 text-[16px] text-[#44403B]">
+            <select value={platform} onChange={(e) => setPlatform(e.target.value)} className="rounded-[8px] border border-[#E9E9E9] px-3 py-2 text-[14px] text-[#44403B] sm:text-[16px]">
               {platformOptions.map((p) => <option key={p} value={p}>Platform: {p}</option>)}
             </select>
 
-            <button onClick={() => fetchArticles(1)} className="rounded-[8px] bg-[#FB6503] px-3 py-2 text-[16px] text-white">Apply</button>
+            <button onClick={() => fetchArticles(1)} className="rounded-[8px] bg-[#FB6503] px-3 py-2 text-[14px] text-white sm:text-[16px]">Apply</button>
           </div>
 
           {error && <div className="px-4 py-2 text-sm text-[#B91C1C]">{error}</div>}
 
-          <div className="grid grid-cols-[1.7fr_0.8fr_0.8fr_0.8fr_0.6fr_0.8fr_1fr] px-4 py-3 text-[10px] font-bold uppercase text-[#999999]">
-            <p>Article Title</p><p>Status</p><p>Platforms</p><p>Created</p><p>Views</p><p>Publisher</p><p>Actions</p>
-          </div>
+          <div className="hidden overflow-x-auto md:block">
+            <div className="min-w-[980px]">
+              <div className="grid grid-cols-[1.7fr_0.8fr_0.8fr_0.8fr_0.6fr_0.8fr_1fr] px-4 py-3 text-[10px] font-bold uppercase text-[#999999]">
+                <p>Article Title</p><p>Status</p><p>Platforms</p><p>Created</p><p>Views</p><p>Publisher</p><p>Actions</p>
+              </div>
 
-          {loadingData ? (
-            <div className="px-4 py-10 text-center text-[#6A6A6A]"><Loader2 className="mr-2 inline h-4 w-4 animate-spin" />Loading articles...</div>
-          ) : (
-            articles.map((article) => (
-              <div key={article.id} className="grid grid-cols-[1.7fr_0.8fr_0.8fr_0.8fr_0.6fr_0.8fr_1fr] items-center border-t border-[#F3F4F6] px-4 py-3">
+              {loadingData ? (
+                <div className="px-4 py-10 text-center text-[#6A6A6A]"><Loader2 className="mr-2 inline h-4 w-4 animate-spin" />Loading articles...</div>
+              ) : (
+                articles.map((article) => (
+                  <div key={article.id} className="grid grid-cols-[1.7fr_0.8fr_0.8fr_0.8fr_0.6fr_0.8fr_1fr] items-center border-t border-[#F3F4F6] px-4 py-3">
                 <div>
-                  <p className="text-[31px] font-medium text-[#212121] line-clamp-1">{article.title}</p>
+                  <p className="text-[18px] font-medium text-[#212121] md:text-[24px] line-clamp-1">{article.title}</p>
                   <p className="text-[10px] text-[#999999]">Last modified: {formatDate(article.updatedAt)}</p>
                 </div>
-                <span className={`w-fit rounded-full px-2 py-0.5 text-[16px] ${statusStyles(article.status)}`}>{article.status}</span>
-                <p className="text-[16px] text-[#44403B] line-clamp-1">{article.publishRecords.map((p) => p.platform).join(', ') || 'None'}</p>
-                <p className="text-[16px] text-[#6A6A6A]">{formatDate(article.createdAt)}</p>
-                <p className="text-[31px] font-medium text-[#44403B]">{article.views.toLocaleString('en-IN')}</p>
-                <button onClick={() => router.push(`/admin/users/${article.user.id}`)} className="text-left text-[16px] text-[#1E40AF] underline underline-offset-2">
+                <span className={`w-fit rounded-full px-2 py-0.5 text-[12px] ${statusStyles(article.status)}`}>{article.status}</span>
+                <p className="text-[14px] text-[#44403B] line-clamp-1">{article.publishRecords.map((p) => p.platform).join(', ') || 'None'}</p>
+                <p className="text-[14px] text-[#6A6A6A]">{formatDate(article.createdAt)}</p>
+                <p className="text-[20px] font-medium text-[#44403B] md:text-[24px]">{article.views.toLocaleString('en-IN')}</p>
+                <button onClick={() => router.push(`/admin/users/${article.user.id}`)} className="text-left text-[14px] text-[#1E40AF] underline underline-offset-2">
                   {article.user.name}
                 </button>
                 <div className="flex flex-wrap items-center gap-1">
@@ -339,15 +348,91 @@ export default function AdminArticlesPage() {
                       {actionBusy === `${article.id}:ARCHIVE` ? '...' : 'Archive'}
                     </button>
                   )}
-                  <button onClick={() => openModerationWindow(article.id)} className="rounded border border-[#E5E7EB] px-2 py-1 text-[10px] text-[#6B7280]">
+                  <button
+                    onClick={() => moderateRow(article.id, 'REMOVE')}
+                    disabled={actionBusy !== null}
+                    className="rounded border border-[#FCA5A5] px-2 py-1 text-[10px] font-bold text-[#B91C1C] disabled:opacity-50"
+                  >
+                    {actionBusy === `${article.id}:REMOVE` ? '...' : 'Remove'}
+                  </button>
+                  <button
+                    onClick={() => moderateRow(article.id, 'SUSPEND')}
+                    disabled={actionBusy !== null}
+                    className="rounded border border-[#FECACA] px-2 py-1 text-[10px] font-bold text-[#991B1B] disabled:opacity-50"
+                  >
+                    {actionBusy === `${article.id}:SUSPEND` ? '...' : 'Suspend Publisher'}
+                  </button>
+                  <button onClick={() => openArticle(article.id)} className="rounded border border-[#E5E7EB] px-2 py-1 text-[10px] text-[#6B7280]">
                     {isModerationMode ? 'Review' : 'Open'}
                   </button>
                 </div>
-              </div>
-            ))
-          )}
+                  </div>
+                ))
+              )}
+            </div>
+          </div>
 
-          <div className="flex items-center justify-between border-t border-[#F3F4F6] px-4 py-3 text-[16px] text-[#6A6A6A]">
+          <div className="md:hidden">
+            {loadingData ? (
+              <div className="px-3 py-8 text-sm text-[#6A6A6A]"><Loader2 className="mr-2 inline h-4 w-4 animate-spin" />Loading articles...</div>
+            ) : (
+              articles.map((article) => (
+                <div key={article.id} className="border-t border-[#F3F4F6] px-3 py-3">
+                  <p className="line-clamp-1 text-[18px] font-semibold text-[#212121]">{article.title}</p>
+                  <p className="mt-1 text-[11px] text-[#999999]">Last modified: {formatDate(article.updatedAt)}</p>
+                  <div className="mt-2 flex flex-wrap items-center gap-2">
+                    <span className={`w-fit rounded-full px-2 py-0.5 text-[11px] ${statusStyles(article.status)}`}>{article.status}</span>
+                    <span className="text-[12px] text-[#6A6A6A]">{article.views.toLocaleString('en-IN')} views</span>
+                    <button onClick={() => router.push(`/admin/users/${article.user.id}`)} className="text-[12px] text-[#1E40AF] underline underline-offset-2">
+                      {article.user.name}
+                    </button>
+                  </div>
+                  <p className="mt-1 line-clamp-1 text-[12px] text-[#57534D]">{article.publishRecords.map((p) => p.platform).join(', ') || 'No platform'}</p>
+                  <div className="mt-3 flex flex-wrap gap-1.5">
+                    <button
+                      onClick={() => moderateRow(article.id, 'WARN')}
+                      disabled={actionBusy !== null}
+                      className="rounded border border-[#FDBA74] px-2 py-1 text-[10px] font-bold text-[#C2410C] disabled:opacity-50"
+                    >
+                      {actionBusy === `${article.id}:WARN` ? '...' : 'Warn'}
+                    </button>
+                    {article.status === 'ARCHIVED' ? (
+                      <button
+                        onClick={() => moderateRow(article.id, 'RESTORE')}
+                        disabled={actionBusy !== null}
+                        className="rounded border border-[#86EFAC] px-2 py-1 text-[10px] font-bold text-[#15803D] disabled:opacity-50"
+                      >
+                        {actionBusy === `${article.id}:RESTORE` ? '...' : 'Restore'}
+                      </button>
+                    ) : (
+                      <button
+                        onClick={() => moderateRow(article.id, 'ARCHIVE')}
+                        disabled={actionBusy !== null}
+                        className="rounded border border-[#FCA5A5] px-2 py-1 text-[10px] font-bold text-[#B91C1C] disabled:opacity-50"
+                      >
+                        {actionBusy === `${article.id}:ARCHIVE` ? '...' : 'Archive'}
+                      </button>
+                    )}
+                    <button
+                      onClick={() => moderateRow(article.id, 'REMOVE')}
+                      disabled={actionBusy !== null}
+                      className="rounded border border-[#FCA5A5] px-2 py-1 text-[10px] font-bold text-[#B91C1C] disabled:opacity-50"
+                    >
+                      {actionBusy === `${article.id}:REMOVE` ? '...' : 'Remove'}
+                    </button>
+                    <button
+                      onClick={() => openArticle(article.id)}
+                      className="rounded border border-[#E5E7EB] px-2 py-1 text-[10px] text-[#6B7280]"
+                    >
+                      {isModerationMode ? 'Review' : 'Open'}
+                    </button>
+                  </div>
+                </div>
+              ))
+            )}
+          </div>
+
+          <div className="flex flex-col items-start justify-between gap-2 border-t border-[#F3F4F6] px-3 py-3 text-[14px] text-[#6A6A6A] sm:flex-row sm:items-center sm:px-4 sm:text-[16px]">
             <p>Showing {visibleRange} of {pagination.total} results</p>
             <div className="flex items-center gap-2">
               <button
@@ -376,7 +461,7 @@ export default function AdminArticlesPage() {
                 <p className="text-[10px] font-bold uppercase text-[#A6A09B]">
                   Content Moderation List {detail ? `› Case ${detail.caseNumber}` : ''}
                 </p>
-                <h2 className="text-[25px] font-bold text-[#292524]">Content Moderation Details</h2>
+                <h2 className="text-[22px] font-bold text-[#292524] sm:text-[25px]">Content Moderation Details</h2>
                 <p className="text-[13px] text-[#79716B]">Reviewing flagged content.</p>
               </div>
               <button
@@ -432,7 +517,7 @@ export default function AdminArticlesPage() {
 
                 <div className="space-y-4">
                   <div className="rounded-[10px] bg-[#FFF0E6] p-4">
-                    <h3 className="text-[31px] font-medium text-[#292524]">Flag Details</h3>
+                    <h3 className="text-[24px] font-medium text-[#292524] sm:text-[31px]">Flag Details</h3>
                     <div className="mt-3 rounded border border-[#E7E5E4] bg-white">
                       <div className="flex items-center justify-between border-b border-[#F5F5F4] px-3 py-3">
                         <span className="text-[10px] font-bold text-[#A6A09B]">REASON</span>
@@ -454,7 +539,7 @@ export default function AdminArticlesPage() {
                   </div>
 
                   <div className="rounded-[14px] border border-[#F5F5F4] bg-white p-4 shadow-sm">
-                    <h3 className="text-[31px] font-medium text-[#292524]">Moderation Actions</h3>
+                    <h3 className="text-[24px] font-medium text-[#292524] sm:text-[31px]">Moderation Actions</h3>
                     <div className="mt-3 space-y-2">
                       <button
                         onClick={() => moderateRow(detail.article.id, 'REMOVE')}

@@ -4,6 +4,7 @@ import { useState } from "react"
 import { DashboardSidebar } from "@/components/layout/dashboard-sidebar"
 import { DashboardHeader } from "@/components/layout/dashboard-header"
 import { AuthGuard } from "@/components/AuthGuard"
+import { X } from "lucide-react"
 
 export default function DashboardLayout({
   children,
@@ -28,7 +29,17 @@ export default function DashboardLayout({
               onClick={() => setMobileSidebarOpen(false)}
               aria-label="Close menu overlay"
             />
-            <DashboardSidebar className="relative z-10" onNavigate={() => setMobileSidebarOpen(false)} />
+            <div className="relative z-10 h-full w-[86vw] max-w-[320px] transition-transform duration-200">
+              <button
+                type="button"
+                className="absolute right-3 top-3 z-20 rounded-full bg-white/90 p-1.5 text-[#212121] shadow"
+                onClick={() => setMobileSidebarOpen(false)}
+                aria-label="Close navigation menu"
+              >
+                <X className="h-4 w-4" />
+              </button>
+              <DashboardSidebar className="h-full w-full" onNavigate={() => setMobileSidebarOpen(false)} />
+            </div>
           </div>
         )}
 

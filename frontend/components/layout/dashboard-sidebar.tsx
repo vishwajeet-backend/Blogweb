@@ -33,6 +33,7 @@ export function DashboardSidebar({ className, onNavigate }: { className?: string
       label: "CONTENT",
       items: [
         { name: "Articles", href: "/dashboard/articles", icon: AlignLeft },
+        { name: "Blogs", href: "/dashboard/blogs", icon: LayoutDashboard },
         { name: "Publishing", href: "/dashboard/integrations", icon: Send },
       ],
     },

@@ -2,9 +2,11 @@
 
 import { useEffect, useMemo, useState } from 'react';
 import { useRouter } from 'next/navigation';
-import { Download, Loader2, RefreshCw, Search, Settings } from 'lucide-react';
+import { CreditCard, Download, FileText, Loader2, RefreshCw, Search, Settings, ShieldCheck, Users } from 'lucide-react';
 import { useAuth } from '@/lib/context/AuthContext';
 import { AdminNavTabs } from '@/components/layout/admin-nav-tabs';
+import { NotificationBell } from '@/components/NotificationBell';
+import { AdminUserMenu } from '@/components/layout/admin-user-menu';
 
 type OverviewResponse = {
   metrics: {
@@ -26,9 +28,14 @@ type OverviewResponse = {
   queueItems: Array<{
     id: string;
     title: string;
+    status: string;
     reason: string;
     detail: string;
     age: string;
+    clicks: number;
+    comments: number;
+    engagement: number;
+    views: number;
   }>;
   transactions: Array<{
     id: string;
@@ -114,45 +121,46 @@ export default function AdminUsersIndexPage() {
 
   return (
     <div className="min-h-screen bg-[#FAF9F6]" style={{ fontFamily: 'Satoshi, var(--font-geist-sans), sans-serif' }}>
-      <header className="border-b border-[#E9E9E9] bg-white/90 px-4 py-3 md:px-6">
-        <div className="mx-auto flex max-w-[1220px] items-center justify-between gap-3">
+      <header className="border-b border-[#E9E9E9] bg-white/90 px-3 py-3 sm:px-4 md:px-6">
+        <div className="mx-auto flex max-w-[1220px] items-center justify-between gap-2 sm:gap-3">
           <div className="flex items-center gap-3">
-            <p className="text-[34px] font-black uppercase tracking-[-0.04em] text-[#FB6503]">LOGOIPSUM</p>
-            <span className="rounded-full bg-[#F3F0EA] px-2 py-1 text-[10px] font-bold text-[#57534D]">ADMIN PANEL</span>
+            <p className="text-[22px] font-black uppercase tracking-[-0.04em] text-[#FB6503] sm:text-[26px] md:text-[34px]">LOGOIPSUM</p>
+            <span className="hidden rounded-full bg-[#F3F0EA] px-2 py-1 text-[10px] font-bold text-[#57534D] sm:inline-flex">ADMIN PANEL</span>
           </div>
-          <div className="flex items-center gap-3 text-[#6A6A6A]">
+          <div className="flex min-w-0 items-center gap-2 text-[#6A6A6A] sm:gap-3">
+            <NotificationBell />
             <div className="flex h-8 w-8 items-center justify-center rounded-full bg-[#E5E7EB] text-xs font-bold">{user.name.slice(0, 2).toUpperCase()}</div>
-            <span className="text-sm font-medium text-[#212121]">{user.name}</span>
-            <button onClick={() => router.push('/admin/settings')} aria-label="Open settings">
+            <AdminUserMenu name={user.name} />
+            <button onClick={() => router.push('/admin/settings')} aria-label="Open settings" className="hidden sm:block">
               <Settings className="h-4 w-4" />
             </button>
           </div>
         </div>
       </header>
 
-      <main className="mx-auto max-w-[1220px] px-4 py-6 md:px-6">
+      <main className="mx-auto max-w-[1220px] px-3 py-5 sm:px-4 md:px-6">
         <div className="flex flex-wrap items-start justify-between gap-3">
           <div>
-            <h1 className="text-[39px] font-bold text-[#1E1E1E]">Admin Overview</h1>
-            <p className="mt-1 text-[16px] font-medium text-[#6A6A6A]">System metrics and platform management.</p>
+            <h1 className="text-[28px] font-bold text-[#1E1E1E] sm:text-[32px] md:text-[39px]">Admin Overview</h1>
+            <p className="mt-1 text-[14px] font-medium text-[#6A6A6A] sm:text-[16px]">System metrics and platform management.</p>
             <AdminNavTabs />
           </div>
-          <div className="flex gap-2">
-            <button className="flex items-center gap-2 rounded-[8px] border border-[#D6D3D1] bg-white px-3 py-2 text-[14px] font-medium text-[#44403B] md:text-[16px]">
+          <div className="flex w-full flex-wrap gap-2 sm:w-auto">
+            <button className="flex items-center gap-2 rounded-[8px] border border-[#D6D3D1] bg-white px-3 py-2 text-[13px] font-medium text-[#44403B] sm:text-[14px] md:text-[16px]">
               <Download className="h-4 w-4" /> Export Report
             </button>
-            <button onClick={loadOverview} className="flex items-center gap-2 rounded-[8px] bg-[#FB6503] px-3 py-2 text-[14px] font-medium text-white md:text-[16px]">
+            <button onClick={loadOverview} className="flex items-center gap-2 rounded-[8px] bg-[#FB6503] px-3 py-2 text-[13px] font-medium text-white sm:text-[14px] md:text-[16px]">
               <RefreshCw className="h-4 w-4" /> Refresh Data
             </button>
           </div>
         </div>
 
-        <div className="mt-5 grid grid-cols-1 gap-3 md:grid-cols-5">
-          <MetricCard title="Total Users" value={data?.metrics.totalUsers ?? 0} sub="+12%" />
-          <MetricCard title="Total Articles" value={data?.metrics.totalArticles ?? 0} sub="+8%" />
-          <MetricCard title="Total Revenue" value={formatMoneyInr(data?.metrics.estimatedRevenue ?? 0)} sub="+24%" />
-          <MetricCard title="Active Subs" value={data?.metrics.activeSubs ?? 0} sub="-2%" />
-          <MetricCard title="System Health" value={`${data?.metrics.systemHealth ?? 99.9}%`} sub="Uptime" />
+        <div className="mt-5 grid grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-5">
+          <MetricCard title="Total Users" value={data?.metrics.totalUsers ?? 0} sub={`${(data?.users || []).filter((u) => u.status === 'ACTIVE').length} active`} icon={<Users className="h-4 w-4 text-[#2563EB]" />} iconBg="bg-[#DBEAFE]" trendTone="up" />
+          <MetricCard title="Total Articles" value={data?.metrics.totalArticles ?? 0} sub={`${data?.queueItems.length || 0} in queue`} icon={<FileText className="h-4 w-4 text-[#7C3AED]" />} iconBg="bg-[#F3E8FF]" trendTone="up" />
+          <MetricCard title="Total Revenue" value={formatMoneyInr(data?.metrics.estimatedRevenue ?? 0)} sub={`${(data?.transactions || []).filter((t) => t.status === 'PAID').length} paid`} icon={<CreditCard className="h-4 w-4 text-[#16A34A]" />} iconBg="bg-[#D1FAE5]" trendTone="up" />
+          <MetricCard title="Active Subs" value={data?.metrics.activeSubs ?? 0} sub="Live billing" icon={<CreditCard className="h-4 w-4 text-[#EA580C]" />} iconBg="bg-[#FFEDD5]" trendTone="down" />
+          <MetricCard title="System Health" value={`${data?.metrics.systemHealth ?? 99.9}%`} sub={`${(data?.systemStatus || []).filter((s) => s.level === 'warn').length} warnings`} icon={<ShieldCheck className="h-4 w-4 text-[#0891B2]" />} iconBg="bg-[#CFFAFE]" trendTone="down" />
         </div>
 
         {error && <div className="mt-4 rounded border border-[#FECACA] bg-[#FEF2F2] px-3 py-2 text-sm text-[#B91C1C]">{error}</div>}
@@ -160,7 +168,7 @@ export default function AdminUsersIndexPage() {
         <div className="mt-5 grid grid-cols-1 gap-4 xl:grid-cols-[1.9fr_0.9fr]">
           <section className="rounded-[10px] border border-[#E9E9E9] bg-white">
             <div className="flex flex-wrap items-center justify-between gap-2 px-4 py-3">
-              <h2 className="text-[31px] font-medium text-[#1E1E1E]">User Management</h2>
+              <h2 className="text-[24px] font-medium text-[#1E1E1E] sm:text-[28px] md:text-[31px]">User Management</h2>
               <div className="flex items-center gap-2">
                 <div className="flex items-center gap-2 rounded-[8px] border border-[#E9E9E9] px-3 py-2">
                   <Search className="h-4 w-4 text-[#9CA3AF]" />
@@ -168,7 +176,7 @@ export default function AdminUsersIndexPage() {
                     value={search}
                     onChange={(e) => setSearch(e.target.value)}
                     placeholder="Search users..."
-                    className="w-36 bg-transparent text-sm outline-none md:w-40"
+                    className="w-28 bg-transparent text-sm outline-none sm:w-36 md:w-40"
                   />
                 </div>
                 <button className="rounded-[8px] border border-[#E9E9E9] px-3 py-2 text-sm text-[#6A6A6A]">All Status</button>
@@ -223,19 +231,26 @@ export default function AdminUsersIndexPage() {
 
           <section className="space-y-4">
             <div className="rounded-[10px] border border-[#E9E9E9] bg-white p-4">
-              <div className="flex items-center justify-between">
-                <h3 className="text-[31px] font-medium text-[#1E1E1E]">Content Queue</h3>
+              <div className="flex items-center justify-between gap-2">
+                <h3 className="text-[24px] font-medium text-[#1E1E1E] sm:text-[31px]">Content Queue</h3>
                 <span className="rounded bg-[#FEE2E2] px-2 py-0.5 text-[10px] font-bold text-[#E11D48]">{(data?.queueItems.length || 0)} Urgent</span>
               </div>
               <div className="mt-3 space-y-3">
-                {data?.queueItems.map((q, idx) => (
+                {data?.queueItems.map((q) => (
                   <div key={q.id} className="rounded border border-[#F3F4F6] bg-[#FAFAFA] p-3">
-                    <p className={`text-[10px] font-bold ${idx % 2 === 0 ? 'text-[#E11D48]' : 'text-[#EA580C]'}`}>{q.reason}</p>
+                    <p className={`text-[10px] font-bold ${q.status === 'SCHEDULED' ? 'text-[#EA580C]' : 'text-[#E11D48]'}`}>{q.reason}</p>
                     <p className="mt-1 text-[16px] font-bold text-[#1E1E1E] line-clamp-1">"{q.title}"</p>
                     <p className="mt-1 text-[10px] text-[#6A6A6A] line-clamp-2">{q.detail}</p>
+                    <div className="mt-2 flex flex-wrap gap-2 text-[10px] text-[#57534D]">
+                      <span className="rounded bg-white px-2 py-1">Views: {q.views}</span>
+                      <span className="rounded bg-white px-2 py-1">Clicks: {q.clicks}</span>
+                      <span className="rounded bg-white px-2 py-1">Comments: {q.comments}</span>
+                      <span className="rounded bg-white px-2 py-1">Engagement: {q.engagement}</span>
+                      <span className="rounded bg-white px-2 py-1">{q.age}</span>
+                    </div>
                     <div className="mt-2 flex gap-2">
-                      <button onClick={() => router.push('/admin/articles?mode=moderation')} className="flex-1 rounded border border-[#E5E7EB] bg-white py-1.5 text-[10px] font-bold text-[#6B7280]">Review</button>
-                      <button onClick={() => router.push('/admin/articles?mode=moderation')} className={`flex-1 rounded py-1.5 text-[10px] font-bold text-white ${idx % 2 === 0 ? 'bg-[#E11D48]' : 'bg-[#FB6503]'}`}>{idx % 2 === 0 ? 'Remove' : 'Approve'}</button>
+                      <button onClick={() => router.push(`/admin/moderation?search=${encodeURIComponent(q.title)}`)} className="flex-1 rounded border border-[#E5E7EB] bg-white py-1.5 text-[10px] font-bold text-[#6B7280]">Review</button>
+                      <button onClick={() => router.push(`/admin/moderation?search=${encodeURIComponent(q.title)}`)} className={`flex-1 rounded py-1.5 text-[10px] font-bold text-white ${q.status === 'SCHEDULED' ? 'bg-[#FB6503]' : 'bg-[#E11D48]'}`}>Open Moderation</button>
                     </div>
                   </div>
                 ))}
@@ -243,7 +258,7 @@ export default function AdminUsersIndexPage() {
             </div>
 
             <div className="rounded-[10px] border border-[#E9E9E9] bg-white p-4">
-              <h3 className="text-[31px] font-medium text-[#1E1E1E]">System Status</h3>
+              <h3 className="text-[24px] font-medium text-[#1E1E1E] sm:text-[31px]">System Status</h3>
               <div className="mt-3 space-y-3">
                 {data?.systemStatus.map((s) => (
                   <div key={s.name} className="flex items-center justify-between text-[16px]">
@@ -260,7 +275,7 @@ export default function AdminUsersIndexPage() {
         </div>
 
         <section className="mt-4 rounded-[10px] border border-[#E9E9E9] bg-white">
-          <h3 className="px-4 py-3 text-[31px] font-medium text-[#1E1E1E]">Recent Transactions</h3>
+          <h3 className="px-4 py-3 text-[24px] font-medium text-[#1E1E1E] sm:text-[28px] md:text-[31px]">Recent Transactions</h3>
           <div className="hidden grid-cols-[0.8fr_1.2fr_0.8fr_0.8fr_0.6fr] border-t border-[#F3F4F6] px-4 py-2 text-[10px] font-bold uppercase text-[#999999] md:grid">
             <p>ID</p><p>User</p><p>Amount</p><p>Status</p><p>Action</p>
           </div>
@@ -276,8 +291,8 @@ export default function AdminUsersIndexPage() {
         </section>
       </main>
 
-      <footer className="mt-8 border-t border-[#FECFB1] bg-[#FECFB1] px-4 py-2 text-[10px] text-[#44403B] md:px-6">
-        <div className="mx-auto flex max-w-[1220px] items-center justify-between">
+      <footer className="mt-8 border-t border-[#FECFB1] bg-[#FECFB1] px-3 py-2 text-[10px] text-[#44403B] sm:px-4 md:px-6">
+        <div className="mx-auto flex max-w-[1220px] flex-wrap items-center justify-between gap-1.5">
           <span>PUBLIShique Admin © 2026. Authenticated as Super Admin.</span>
           <span>System Logs · Support · v2.4.0</span>
         </div>
@@ -286,13 +301,30 @@ export default function AdminUsersIndexPage() {
   );
 }
 
-function MetricCard({ title, value, sub }: { title: string; value: string | number; sub: string }) {
+function MetricCard({
+  title,
+  value,
+  sub,
+  icon,
+  iconBg,
+  trendTone = 'up',
+}: {
+  title: string;
+  value: string | number;
+  sub: string;
+  icon: React.ReactNode;
+  iconBg: string;
+  trendTone?: 'up' | 'down';
+}) {
   return (
     <div className="rounded-[10px] border border-[#E9E9E9] bg-white p-4">
-      <p className="text-[10px] font-bold uppercase text-[#999999]">{title}</p>
+      <div className="flex items-start justify-between">
+        <p className="text-[10px] font-bold uppercase text-[#999999]">{title}</p>
+        <span className={`inline-flex h-8 w-8 items-center justify-center rounded-full ${iconBg}`}>{icon}</span>
+      </div>
       <div className="mt-3 flex items-end gap-2">
-        <p className="text-[31px] font-medium text-[#1E1E1E]">{value}</p>
-        <p className="pb-1 text-[10px] font-bold text-[#16A34A]">{sub}</p>
+        <p className="text-[28px] font-medium text-[#1E1E1E] sm:text-[31px]">{value}</p>
+        <p className={`pb-1 text-[10px] font-bold ${trendTone === 'up' ? 'text-[#16A34A]' : 'text-[#E11D48]'}`}>{sub}</p>
       </div>
     </div>
   );

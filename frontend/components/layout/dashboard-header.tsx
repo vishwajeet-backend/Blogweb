@@ -1,8 +1,9 @@
 "use client"
 
-import { Bell, ChevronDown, LogOut, Menu, Moon, Search, Sun } from "lucide-react"
+import { ChevronDown, LogOut, Menu, Moon, Search, Sun } from "lucide-react"
 import { useAuth } from "@/lib/context/AuthContext"
 import { useTheme } from "@/lib/context/ThemeContext"
+import { NotificationBell } from "@/components/NotificationBell"
 
 function initials(name: string) {
   return name
@@ -47,7 +48,7 @@ export function DashboardHeader({ onMenuClick }: { onMenuClick?: () => void }) {
           <button type="button" onClick={toggleTheme} className="rounded-full p-1" aria-label="Toggle dark mode">
             {isDark ? <Sun className="h-5 w-5" /> : <Moon className="h-5 w-5" />}
           </button>
-          <Bell className="h-6 w-6" />
+          <NotificationBell />
         </div>
 
         <div className="flex items-center gap-2 sm:gap-3">

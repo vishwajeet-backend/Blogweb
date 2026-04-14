@@ -135,8 +135,9 @@ export async function GET(request: NextRequest) {
     })
     console.log('[OAuth Google Callback] Refresh token stored')
 
-    // Redirect to dashboard with tokens
-    const redirectUrl = new URL('/dashboard', APP_URL)
+    // Redirect based on role with tokens
+    const redirectPath = user.role === 'ADMIN' ? '/admin/users' : '/dashboard'
+    const redirectUrl = new URL(redirectPath, APP_URL)
     redirectUrl.searchParams.set('accessToken', accessToken)
     redirectUrl.searchParams.set('refreshToken', refreshToken)
 

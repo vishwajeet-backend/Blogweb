@@ -1,6 +1,6 @@
 "use client"
 
-import { useState, useEffect } from "react"
+import { useState, useEffect, useRef } from "react"
 import { useRouter } from "next/navigation"
 import { Button } from "@/components/ui/button"
 import { Badge } from "@/components/ui/badge"
@@ -49,6 +49,7 @@ export default function SettingsPage() {
 
   const [profile, setProfile] = useState<UserProfile | null>(null)
   const [name, setName] = useState("")
+  const [avatar, setAvatar] = useState("")
   const [bio, setBio] = useState("")
   const [website, setWebsite] = useState("")
   const [twitterHandle, setTwitterHandle] = useState("")
@@ -57,6 +58,8 @@ export default function SettingsPage() {
   const [currentPassword, setCurrentPassword] = useState("")
   const [newPassword, setNewPassword] = useState("")
   const [confirmPassword, setConfirmPassword] = useState("")
+  const [uploadingAvatar, setUploadingAvatar] = useState(false)
+  const avatarInputRef = useRef<HTMLInputElement>(null)
 
   const [settings, setSettings] = useState({
     emailOnPublish: true,
@@ -81,6 +84,7 @@ export default function SettingsPage() {
       const user = profileData.data.user
       setProfile(user)
       setName(user.name || "")
+      setAvatar(user.avatar || "")
       setBio(user.bio || "")
       setWebsite(user.website || "")
       setTwitterHandle(user.twitterHandle || "")
@@ -102,13 +106,44 @@ export default function SettingsPage() {
       const res = await fetch('/api/user/profile', {
         method: 'PUT',
         headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${token}` },
-        body: JSON.stringify({ name, bio, website, twitterHandle, linkedinUrl })
+        body: JSON.stringify({ name, avatar, bio, website, twitterHandle, linkedinUrl })
       })
       const data = await res.json()
       if (res.ok) { setProfile(data.data.user); toast.success('Profile updated!') }
       else toast.error(data.error || 'Update failed')
     } catch (e) { toast.error('Error occurred') }
     finally { setSaving(false) }
+  }
+
+  const handleAvatarUpload = async (file: File) => {
+    try {
+      setUploadingAvatar(true)
+      const token = localStorage.getItem('accessToken')
+      const formData = new FormData()
+      formData.append('file', file)
+      formData.append('alt', `${name || 'User'} profile photo`)
+
+      const response = await fetch('/api/images/upload', {
+        method: 'POST',
+        headers: {
+          Authorization: `Bearer ${token}`,
+        },
+        body: formData,
+      })
+
+      const data = await response.json()
+      if (!response.ok || !data.success) {
+        throw new Error(data.error || 'Failed to upload avatar')
+      }
+
+      const nextAvatar = data?.url || data?.data?.url || ''
+      setAvatar(nextAvatar)
+      toast.success('Avatar uploaded')
+    } catch (e: any) {
+      toast.error(e.message || 'Failed to upload avatar')
+    } finally {
+      setUploadingAvatar(false)
+    }
   }
 
   const handleChangePassword = async () => {
@@ -122,11 +157,33 @@ export default function SettingsPage() {
         headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${token}` },
         body: JSON.stringify({ currentPassword, newPassword, confirmPassword })
       })
+      const data = await res.json()
       if (res.ok) {
         toast.success('Password changed! Relogging...')
         setTimeout(() => { localStorage.removeItem('accessToken'); router.push('/login') }, 2000)
-      } else toast.error('Password change failed')
+      } else toast.error(data.error || 'Password change failed')
     } finally { setChangingPassword(false) }
+  }
+
+  const handleSavePreferences = async () => {
+    try {
+      const token = localStorage.getItem('accessToken')
+      const res = await fetch('/api/user/settings', {
+        method: 'PUT',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${token}`,
+        },
+        body: JSON.stringify(settings),
+      })
+      const data = await res.json()
+      if (!res.ok) {
+        throw new Error(data.error || 'Failed to save preferences')
+      }
+      toast.success('Preferences Updated')
+    } catch (e: any) {
+      toast.error(e.message || 'Failed to save preferences')
+    }
   }
 
   const handleDeleteAccount = async () => {
@@ -239,6 +296,42 @@ export default function SettingsPage() {
                 <h2 style={{ fontSize: '20px', fontWeight: 800 }}>Profile Information</h2>
               </div>
 
+              <div style={{ display: 'flex', alignItems: 'center', gap: '16px', marginBottom: '24px' }}>
+                {avatar ? (
+                  <img src={avatar} alt="profile" style={{ width: '64px', height: '64px', borderRadius: '50%', objectFit: 'cover', border: '1px solid #eee' }} />
+                ) : (
+                  <div style={{ width: '64px', height: '64px', borderRadius: '50%', backgroundColor: '#f5f5f5', border: '1px solid #eee', display: 'flex', alignItems: 'center', justifyContent: 'center', fontWeight: 800, color: '#555' }}>
+                    {(name || 'U').slice(0, 1).toUpperCase()}
+                  </div>
+                )}
+                <div style={{ display: 'flex', gap: '10px', flexWrap: 'wrap' }}>
+                  <input
+                    className="settings-input"
+                    value={avatar}
+                    onChange={(e) => setAvatar(e.target.value)}
+                    placeholder="Avatar URL"
+                    style={{ padding: '10px 14px', borderRadius: '10px', border: '1px solid #eee', backgroundColor: '#fcfcfc', fontSize: '13px', minWidth: '260px' }}
+                  />
+                  <input
+                    ref={avatarInputRef}
+                    type="file"
+                    accept="image/*"
+                    style={{ display: 'none' }}
+                    onChange={(e) => {
+                      const file = e.target.files?.[0]
+                      if (file) void handleAvatarUpload(file)
+                    }}
+                  />
+                  <button
+                    onClick={() => avatarInputRef.current?.click()}
+                    disabled={uploadingAvatar}
+                    style={{ padding: '10px 14px', borderRadius: '10px', border: '1px solid #eee', backgroundColor: '#fff', fontSize: '12px', fontWeight: 800, cursor: 'pointer' }}
+                  >
+                    {uploadingAvatar ? 'UPLOADING...' : 'UPLOAD IMAGE'}
+                  </button>
+                </div>
+              </div>
+
               <div className="settings-form-grid" style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '24px', marginBottom: '32px' }}>
                 <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
                   <label style={{ fontSize: '11px', fontWeight: 800, color: '#999' }}>FULL NAME</label>
@@ -340,7 +433,7 @@ export default function SettingsPage() {
                   </div>
                 ))}
                 <button
-                  onClick={() => toast.success('Preferences Updated')}
+                  onClick={handleSavePreferences}
                   style={{ background: 'none', border: 'none', color: '#FF7A33', fontSize: '12px', fontWeight: 800, textAlign: 'left', marginTop: '10px', cursor: 'pointer' }}>SAVE PREFERENCES</button>
               </div>
             </div>

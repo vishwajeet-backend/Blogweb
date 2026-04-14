@@ -69,7 +69,7 @@ function AnalyticsContent() {
   const [compare, setCompare] = useState(false)
 
   const [overviewStats, setOverviewStats] = useState<any>(null)
-  const [totals, setTotals] = useState({ views: 0, likes: 0, comments: 0, shares: 0, bookmarks: 0 })
+  const [totals, setTotals] = useState({ views: 0, clicks: 0, likes: 0, comments: 0, shares: 0, bookmarks: 0 })
   const [byPlatform, setByPlatform] = useState<PlatformStat[]>([])
   const [byArticle, setByArticle] = useState<ArticleAnalytics[]>([])
 
@@ -96,7 +96,7 @@ function AnalyticsContent() {
 
       if (analyticsRes.ok) {
         const json = await analyticsRes.json()
-        setTotals(json.data?.totals || { views: 0, likes: 0, comments: 0, shares: 0, bookmarks: 0 })
+        setTotals(json.data?.totals || { views: 0, clicks: 0, likes: 0, comments: 0, shares: 0, bookmarks: 0 })
         setByPlatform(json.data?.byPlatform || [])
         setByArticle(json.data?.byArticle || [])
       }
@@ -137,43 +137,17 @@ function AnalyticsContent() {
 
   const seriesData = useMemo(() => {
     const source = byArticle.slice(0, 10)
-    if (source.length > 0) {
-      return source.map((article, index) => ({
-        label: `Oct ${String(index * 3 + 3).padStart(2, "0")}`,
-        views: article.totalViews,
-      }))
-    }
-
-    return [
-      { label: "Oct 03", views: 1200 },
-      { label: "Oct 05", views: 1180 },
-      { label: "Oct 08", views: 1600 },
-      { label: "Oct 10", views: 1900 },
-      { label: "Oct 12", views: 2050 },
-      { label: "Oct 15", views: 2100 },
-      { label: "Oct 20", views: 2450 },
-      { label: "Oct 22", views: 2500 },
-      { label: "Oct 25", views: 2400 },
-      { label: "Oct 30", views: 3000 },
-    ]
+    return source.map((article, index) => ({
+      label: `#${index + 1}`,
+      views: article.totalViews,
+    }))
   }, [byArticle])
 
   const trafficData = useMemo(() => {
-    const platformData = byPlatform
+    return byPlatform
       .sort((a, b) => b.totalViews - a.totalViews)
       .slice(0, 4)
       .map((item) => ({ name: platformLabel(item.platform), value: item.totalViews }))
-
-    if (platformData.length === 0) {
-      return [
-        { name: "Direct", value: 45 },
-        { name: "Social", value: 25 },
-        { name: "Organic", value: 20 },
-        { name: "Referral", value: 10 },
-      ]
-    }
-
-    return platformData
   }, [byPlatform])
 
   const engagementData = [
@@ -183,38 +157,54 @@ function AnalyticsContent() {
     { name: "SAVES", value: totals.bookmarks || 0 },
   ]
 
-  const deviceData = [
-    { name: "Mobile (iOS)", value: 55 },
-    { name: "Desktop", value: 35 },
-    { name: "Tablet", value: 10 },
-  ]
+  const platformShareData = useMemo(() => {
+    const total = trafficData.reduce((sum, row) => sum + row.value, 0)
+    if (total === 0) return []
+    return trafficData.map((row) => ({
+      name: row.name,
+      value: Math.round((row.value / total) * 100),
+    }))
+  }, [trafficData])
+
+  const trendMeta = useMemo(() => {
+    const recentArticles = Number(overviewStats?.recentActivity?.articlesCreated || 0)
+    const recentPublishes = Number(overviewStats?.recentActivity?.platformPublishes || 0)
+    const recentPublishedContent = Number(overviewStats?.recentActivity?.articlesPublished || 0)
+
+    return {
+      viewsDelta: recentArticles > 0 ? `+${recentArticles}` : "0",
+      clicksDelta: totals.clicks > 0 ? `+${compactNumber(totals.clicks)}` : recentPublishes > 0 ? `+${recentPublishes}` : "0",
+      engagementDelta: recentPublishedContent > 0 ? `+${recentPublishedContent}` : "0",
+      commentsDelta: totals.comments > 0 ? "+active" : "0",
+    }
+  }, [overviewStats, totals.clicks, totals.comments])
 
   const cards = [
     {
       title: "Total Views",
       value: compactNumber(overviewStats?.articles?.totalViews || totals.views || 0),
-      delta: "+12%",
+      delta: trendMeta.viewsDelta,
       icon: Eye,
       positive: true,
     },
     {
       title: "Total Clicks",
-      value: compactNumber(totals.shares || 0),
-      delta: "+5.2%",
+      value: compactNumber(totals.clicks || 0),
+      delta: trendMeta.clicksDelta,
       icon: MousePointerClick,
       positive: true,
     },
     {
       title: "Engagement",
       value: compactNumber((totals.likes || 0) + (totals.comments || 0)),
-      delta: "-2.1%",
+      delta: trendMeta.engagementDelta,
       icon: Heart,
-      positive: false,
+      positive: true,
     },
     {
       title: "Comments",
       value: compactNumber(totals.comments || 0),
-      delta: "+8.4%",
+      delta: trendMeta.commentsDelta,
       icon: MessageCircle,
       positive: true,
     },
@@ -289,7 +279,7 @@ function AnalyticsContent() {
                 </div>
                 <p className="text-xs font-medium text-[#999999]">{card.title}</p>
                 <p className="mt-1 text-2xl font-bold text-[#1E1E1E]">{card.value}</p>
-                <p className="mt-1 text-[11px] font-medium text-[#BABABA]">vs 218.4K last period</p>
+                <p className="mt-1 text-[11px] font-medium text-[#BABABA]">Real-time platform data</p>
               </div>
             )
           })}
@@ -377,13 +367,13 @@ function AnalyticsContent() {
           </div>
 
           <div className="rounded-2xl border border-[#E9E9E9] bg-white p-4">
-            <h3 className="text-[31px] font-medium text-[#212121]">Device & Platform</h3>
+            <h3 className="text-[31px] font-medium text-[#212121]">Platform Share</h3>
             <div className="grid grid-cols-[130px_1fr] items-center gap-4">
               <div className="h-[140px]">
                 <ResponsiveContainer width="100%" height="100%">
                   <PieChart>
-                    <Pie data={deviceData} dataKey="value" innerRadius={40} outerRadius={58}>
-                      {deviceData.map((_, idx) => (
+                    <Pie data={platformShareData} dataKey="value" innerRadius={40} outerRadius={58}>
+                      {platformShareData.map((_, idx) => (
                         <Cell key={idx} fill={PIE_COLORS[idx % PIE_COLORS.length]} />
                       ))}
                     </Pie>
@@ -392,7 +382,7 @@ function AnalyticsContent() {
               </div>
 
               <div className="space-y-3">
-                {deviceData.map((row, idx) => (
+                {platformShareData.map((row, idx) => (
                   <div key={row.name}>
                     <div className="mb-1 flex items-center justify-between text-xs">
                       <span className="text-[#4D4D4D]">{row.name}</span>

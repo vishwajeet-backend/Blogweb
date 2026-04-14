@@ -2,10 +2,9 @@
 
 import { useState, useEffect } from "react"
 import Link from "next/link"
-import { Calendar, User, ArrowRight, Search, Loader2, Clock } from "lucide-react"
+import { Calendar, User, ArrowRight, Search, Loader2, Clock, Bookmark, X } from "lucide-react"
 import { toast } from "sonner"
 import { useAuth } from "@/lib/context/AuthContext"
-import Image from "next/image"
 
 interface Article {
   id: string
@@ -13,6 +12,7 @@ interface Article {
   excerpt: string
   slug: string
   coverImage: string | null
+  featuredImage?: string | null
   publishedAt: string
   readTime: number
   wordCount: number
@@ -30,6 +30,22 @@ interface PaginationData {
   totalPages: number
 }
 
+type SavedArticle = {
+  id: string
+  title: string
+  excerpt: string | null
+  slug: string
+  coverImage: string | null
+  featuredImage?: string | null
+  publishedAt: string
+  readTime: number
+  user: {
+    id: string
+    name: string
+    avatar: string | null
+  }
+}
+
 export default function BlogPage() {
   const { user } = useAuth()
   const [articles, setArticles] = useState<Article[]>([])
@@ -37,6 +53,9 @@ export default function BlogPage() {
   const [searchQuery, setSearchQuery] = useState("")
   const [currentPage, setCurrentPage] = useState(1)
   const [pagination, setPagination] = useState<PaginationData | null>(null)
+  const [savedOpen, setSavedOpen] = useState(false)
+  const [savedLoading, setSavedLoading] = useState(false)
+  const [savedArticles, setSavedArticles] = useState<SavedArticle[]>([])
 
   useEffect(() => {
     fetchArticles(currentPage, searchQuery)
@@ -72,6 +91,33 @@ export default function BlogPage() {
     e.preventDefault()
     setCurrentPage(1)
     fetchArticles(1, searchQuery)
+  }
+
+  const openSavedWindow = async () => {
+    if (!user) {
+      toast.error("Please login to view saved blogs")
+      return
+    }
+
+    try {
+      setSavedLoading(true)
+      const token = localStorage.getItem("accessToken")
+      const response = await fetch("/api/blogs/saved", {
+        headers: {
+          Authorization: `Bearer ${token}`,
+        },
+      })
+      const data = await response.json()
+      if (!response.ok || !data.success) {
+        throw new Error(data.error || "Failed to fetch saved blogs")
+      }
+      setSavedArticles(data.data?.articles || [])
+      setSavedOpen(true)
+    } catch (error: any) {
+      toast.error(error.message || "Failed to fetch saved blogs")
+    } finally {
+      setSavedLoading(false)
+    }
   }
 
   const formatDate = (dateString: string) => {
@@ -139,6 +185,29 @@ export default function BlogPage() {
               style={{ position: 'absolute', left: '24px', top: '50%', transform: 'translateY(-50%)', color: '#FF7A33' }}
             />
           </form>
+
+          <div style={{ marginTop: '18px' }}>
+            <button
+              onClick={openSavedWindow}
+              disabled={savedLoading}
+              style={{
+                border: '1px solid #FF7A33',
+                color: '#FF7A33',
+                background: '#fff',
+                borderRadius: '40px',
+                padding: '10px 16px',
+                fontSize: '13px',
+                fontWeight: 800,
+                display: 'inline-flex',
+                alignItems: 'center',
+                gap: '8px',
+                cursor: savedLoading ? 'not-allowed' : 'pointer',
+                opacity: savedLoading ? 0.7 : 1,
+              }}
+            >
+              <Bookmark size={16} /> {savedLoading ? "Loading..." : "Saved Blogs"}
+            </button>
+          </div>
         </div>
       </section>
 
@@ -164,11 +233,14 @@ export default function BlogPage() {
             <>
               <div style={{
                 display: 'grid',
-                gridTemplateColumns: 'repeat(auto-fill, minmax(360px, 1fr))',
+                gridTemplateColumns: 'repeat(auto-fill, minmax(280px, 1fr))',
                 gap: '40px'
               }}>
                 {articles.map((article) => (
                   <Link key={article.id} href={`/blog/${article.id}`} style={{ textDecoration: 'none', color: 'inherit' }}>
+                    {(() => {
+                      const cardImage = article.coverImage || article.featuredImage || null
+                      return (
                     <article
                       style={{
                         backgroundColor: '#fff',
@@ -193,9 +265,9 @@ export default function BlogPage() {
                     >
                       {/* Image Container */}
                       <div style={{ position: 'relative', height: '240px', width: '100%', overflow: 'hidden' }}>
-                        {article.coverImage ? (
+                        {cardImage ? (
                           <img
-                            src={article.coverImage}
+                            src={cardImage}
                             alt={article.title}
                             style={{ width: '100%', height: '100%', objectFit: 'cover' }}
                           />
@@ -280,6 +352,8 @@ export default function BlogPage() {
                         </div>
                       </div>
                     </article>
+                      )
+                    })()}
                   </Link>
                 ))}
               </div>
@@ -342,6 +416,77 @@ export default function BlogPage() {
           </div>
         </div>
       </section>
+
+      {savedOpen && (
+        <div
+          onClick={() => setSavedOpen(false)}
+          style={{
+            position: 'fixed',
+            inset: 0,
+            backgroundColor: 'rgba(0,0,0,0.45)',
+            zIndex: 80,
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'center',
+            padding: '20px',
+          }}
+        >
+          <div
+            onClick={(e) => e.stopPropagation()}
+            style={{
+              width: 'min(920px, 100%)',
+              maxHeight: '80vh',
+              overflowY: 'auto',
+              backgroundColor: '#fff',
+              borderRadius: '20px',
+              border: '1px solid #f0f0f0',
+              boxShadow: '0 24px 60px rgba(0,0,0,0.2)',
+            }}
+          >
+            <div style={{ padding: '18px 20px', borderBottom: '1px solid #f3f3f3', display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+              <div>
+                <p style={{ margin: 0, fontSize: '10px', letterSpacing: '0.08em', fontWeight: 800, color: '#999', textTransform: 'uppercase' }}>Reader Library</p>
+                <h3 style={{ margin: '4px 0 0', fontSize: '24px', fontWeight: 800, color: '#1a1a1a' }}>Saved Blogs</h3>
+              </div>
+              <button onClick={() => setSavedOpen(false)} style={{ border: '1px solid #ececec', background: '#fff', borderRadius: '10px', width: '34px', height: '34px', display: 'flex', alignItems: 'center', justifyContent: 'center', cursor: 'pointer' }}>
+                <X size={16} />
+              </button>
+            </div>
+
+            <div style={{ padding: '18px 20px 22px' }}>
+              {savedArticles.length === 0 ? (
+                <div style={{ padding: '36px 8px', textAlign: 'center', color: '#666' }}>
+                  <p style={{ margin: 0, fontSize: '16px', fontWeight: 700 }}>No saved blogs yet</p>
+                  <p style={{ margin: '8px 0 0', fontSize: '13px' }}>When you save blogs, they will appear here.</p>
+                </div>
+              ) : (
+                <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(260px, 1fr))', gap: '14px' }}>
+                  {savedArticles.map((article) => {
+                    const cardImage = article.coverImage || article.featuredImage || null
+                    return (
+                      <Link key={article.id} href={`/blog/${article.id}`} onClick={() => setSavedOpen(false)} style={{ textDecoration: 'none', color: 'inherit' }}>
+                        <article style={{ border: '1px solid #f1f1f1', borderRadius: '14px', overflow: 'hidden', backgroundColor: '#fff' }}>
+                          <div style={{ height: '120px', backgroundColor: '#fafafa' }}>
+                            {cardImage ? (
+                              <img src={cardImage} alt={article.title} style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
+                            ) : null}
+                          </div>
+                          <div style={{ padding: '10px 12px 12px' }}>
+                            <p style={{ margin: 0, fontSize: '15px', fontWeight: 800, color: '#1a1a1a', lineHeight: 1.35 }}>{article.title}</p>
+                            <p style={{ margin: '6px 0 0', fontSize: '12px', color: '#666', display: '-webkit-box', WebkitLineClamp: '2', WebkitBoxOrient: 'vertical', overflow: 'hidden' }}>
+                              {article.excerpt || 'Read this saved blog'}
+                            </p>
+                          </div>
+                        </article>
+                      </Link>
+                    )
+                  })}
+                </div>
+              )}
+            </div>
+          </div>
+        </div>
+      )}
 
     </div>
   )

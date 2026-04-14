@@ -87,7 +87,7 @@ export default function DashboardPage() {
 
         const [statsRes, articlesRes, connRes] = await Promise.all([
           fetch("/api/user/stats", { headers: { Authorization: `Bearer ${token}` } }),
-          fetch("/api/articles?limit=6", { headers: { Authorization: `Bearer ${token}` } }),
+          fetch("/api/articles?limit=6&scope=mine", { headers: { Authorization: `Bearer ${token}` } }),
           fetch("/api/platforms/connections", { headers: { Authorization: `Bearer ${token}` } }),
         ])
 
@@ -129,7 +129,7 @@ export default function DashboardPage() {
     })
   }, [connections])
 
-  if (loading || loadingData) {
+  if (loading || loadingData || user?.role === "ADMIN") {
     return <DashboardSkeleton />
   }
 
@@ -146,28 +146,28 @@ export default function DashboardPage() {
         backgroundSize: "cover",
       }}
     >
-      <div className="mx-auto w-full max-w-[1120px] px-4 pb-10 pt-8 md:px-10 md:pt-[52px]">
+      <div className="mx-auto w-full max-w-[1120px] px-4 pb-10 pt-6 md:px-10 md:pt-[52px]">
         <div className="flex flex-wrap items-start justify-between gap-5">
           <div>
-            <h1 className="text-[32px] font-bold leading-none text-[#212121] dark:text-[#F2F2F2] md:text-[39px]">
+            <h1 className="text-[30px] font-bold leading-none text-[#212121] dark:text-[#F2F2F2] md:text-[39px]">
               Welcome Back,
               <span className="ml-2 italic text-[#6A6A6A] dark:text-[#B5B5B5]">{user?.name?.split(" ")[0] || "Isabella"}</span>
             </h1>
-            <p className="mt-3 text-base font-medium text-[#6A6A6A] dark:text-[#B5B5B5]">
+            <p className="mt-3 text-[13px] font-medium text-[#6A6A6A] dark:text-[#B5B5B5] md:text-base">
               Here is what is happening with your content today.
             </p>
           </div>
 
-          <div className="flex gap-6">
-            <div className="w-[168px] rounded-[20px] border border-[#E9E9E9] bg-white p-4 text-center dark:border-[#343434] dark:bg-[#1E1E1E]">
-              <p className="text-base font-medium text-[#212121] dark:text-[#F2F2F2]">TOTAL VIEWS</p>
-              <p className="mt-2 text-[28px] font-bold text-[#1E1E1E] dark:text-[#F2F2F2]">
+          <div className="flex w-full gap-2 sm:w-auto sm:gap-6">
+            <div className="flex-1 rounded-[20px] border border-[#E9E9E9] bg-white p-3 text-center dark:border-[#343434] dark:bg-[#1E1E1E] sm:w-[168px] sm:p-4">
+              <p className="text-[13px] font-medium text-[#212121] dark:text-[#F2F2F2] md:text-base">TOTAL VIEWS</p>
+              <p className="mt-1 text-[24px] font-bold text-[#1E1E1E] dark:text-[#F2F2F2] sm:mt-2 sm:text-[28px]">
                 {stats.totalViews >= 1000 ? `${(stats.totalViews / 1000).toFixed(1)}K` : stats.totalViews}
               </p>
             </div>
-            <div className="w-[168px] rounded-[20px] border border-[#E9E9E9] bg-white p-4 text-center dark:border-[#343434] dark:bg-[#1E1E1E]">
-              <p className="text-base font-medium text-[#212121] dark:text-[#F2F2F2]">PUBLISHED</p>
-              <p className="mt-2 text-[28px] font-bold text-[#1E1E1E] dark:text-[#F2F2F2]">{stats.totalPublished}</p>
+            <div className="flex-1 rounded-[20px] border border-[#E9E9E9] bg-white p-3 text-center dark:border-[#343434] dark:bg-[#1E1E1E] sm:w-[168px] sm:p-4">
+              <p className="text-[13px] font-medium text-[#212121] dark:text-[#F2F2F2] md:text-base">PUBLISHED</p>
+              <p className="mt-1 text-[24px] font-bold text-[#1E1E1E] dark:text-[#F2F2F2] sm:mt-2 sm:text-[28px]">{stats.totalPublished}</p>
             </div>
           </div>
         </div>
@@ -184,7 +184,44 @@ export default function DashboardPage() {
               </button>
             </div>
 
-            <div className="overflow-x-auto">
+            <div className="md:hidden bg-[#FFFAF3] px-3 py-3">
+              {articles[0] ? (
+                <div className="space-y-2">
+                  <div className="grid grid-cols-[96px_1fr] gap-2 text-[16px]">
+                    <p className="font-bold text-[#1E1E1E]">TITLE</p>
+                    <p className="text-[#2D3648] line-clamp-1">{articles[0].title}</p>
+                  </div>
+                  <div className="grid grid-cols-[96px_1fr] gap-2 text-[16px]">
+                    <p className="font-bold text-[#1E1E1E]">STATUS</p>
+                    <span className="w-fit rounded-2xl bg-[#DCFCE7] px-2.5 py-1 text-xs text-[#166534]">
+                      {articles[0].status === "PUBLISHED" ? "Published" : articles[0].status}
+                    </span>
+                  </div>
+                  <div className="grid grid-cols-[96px_1fr] gap-2 text-[16px]">
+                    <p className="font-bold text-[#1E1E1E]">PLATFORM</p>
+                    <p className="text-[#52525B] line-clamp-1">
+                      {(articles[0].publishRecords || []).length > 0
+                        ? (articles[0].publishRecords || []).slice(0, 2).map((rec) => rec.platform).join(", ")
+                        : "Wordpress, Medium"}
+                    </p>
+                  </div>
+                  <div className="grid grid-cols-[96px_1fr] gap-2 text-[16px]">
+                    <p className="font-bold text-[#1E1E1E]">DATE</p>
+                    <p className="text-[#52525B]">{formatDate(articles[0].publishedAt || articles[0].createdAt)}</p>
+                  </div>
+                  <div className="grid grid-cols-[96px_1fr] gap-2 text-[16px]">
+                    <p className="font-bold text-[#1E1E1E]">ACTION</p>
+                    <button className="w-fit text-[#9CA3AF]" onClick={() => router.push(`/dashboard/articles/${articles[0].id}`)}>
+                      <MoreHorizontal className="h-5 w-5" />
+                    </button>
+                  </div>
+                </div>
+              ) : (
+                <div className="py-8 text-[13px] text-[#6A6A6A]">No articles yet. Create your first article.</div>
+              )}
+            </div>
+
+            <div className="hidden overflow-x-auto md:block">
               <div className="min-w-[680px]">
                 <div className="grid grid-cols-[1.4fr_0.9fr_1.2fr_0.9fr_0.5fr] bg-[#FFFAF3] px-3 py-2 text-base font-bold text-[#1E1E1E]">
                   <p>TITLE</p>

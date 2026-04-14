@@ -5,6 +5,9 @@ import { useParams, useRouter } from 'next/navigation';
 import { Copy, Download, Mail, MapPin, Shield, Trash2 } from 'lucide-react';
 import { useAuth } from '@/lib/context/AuthContext';
 import { AdminNavTabs } from '@/components/layout/admin-nav-tabs';
+import { toast } from 'sonner';
+import { NotificationBell } from '@/components/NotificationBell';
+import { AdminUserMenu } from '@/components/layout/admin-user-menu';
 
 type DetailResponse = {
   user: {
@@ -57,6 +60,7 @@ export default function AdminUserDetailPage() {
   const [data, setData] = useState<DetailResponse | null>(null);
   const [loadingData, setLoadingData] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const [actionBusy, setActionBusy] = useState<string | null>(null);
 
   useEffect(() => {
     if (!loading && !user) router.replace(`/login?redirect=/admin/users/${params.id}`);
@@ -90,6 +94,36 @@ export default function AdminUserDetailPage() {
     fetchDetail();
   }, [user, params.id]);
 
+  const runUserModerationAction = async (action: 'SUSPEND' | 'UNSUSPEND' | 'ARCHIVE_CONTENT' | 'REMOVE_CONTENT') => {
+    try {
+      const token = localStorage.getItem('accessToken');
+      if (!token) return;
+
+      setActionBusy(action);
+
+      const response = await fetch(`/api/admin/users/${params.id}`, {
+        method: 'PATCH',
+        headers: {
+          'Content-Type': 'application/json',
+          Authorization: `Bearer ${token}`,
+        },
+        body: JSON.stringify({ action }),
+      });
+
+      const json = await response.json();
+      if (!response.ok) {
+        throw new Error(json.error || 'Action failed');
+      }
+
+      toast.success(json.message || 'Action completed');
+      await fetchDetail();
+    } catch (err: any) {
+      toast.error(err?.message || 'Action failed');
+    } finally {
+      setActionBusy(null);
+    }
+  };
+
   const initials = useMemo(() => {
     const name = data?.user.name || 'JD';
     return name.split(' ').map((x) => x[0]).join('').slice(0, 2).toUpperCase();
@@ -100,20 +134,21 @@ export default function AdminUserDetailPage() {
 
   return (
     <div className="min-h-screen bg-[#FAF9F6]" style={{ fontFamily: 'Satoshi, var(--font-geist-sans), sans-serif' }}>
-      <header className="border-b border-[#E9E9E9] bg-white px-4 py-3">
-        <div className="mx-auto flex max-w-[1220px] items-center justify-between">
+      <header className="border-b border-[#E9E9E9] bg-white px-3 py-3 sm:px-4">
+        <div className="mx-auto flex max-w-[1220px] items-center justify-between gap-2">
           <div className="flex items-center gap-3">
-            <p className="text-[34px] font-black uppercase tracking-[-0.04em] text-[#FB6503]">LOGOIPSUM</p>
-            <span className="rounded-full bg-[#F3F0EA] px-2 py-1 text-[10px] font-bold text-[#57534D]">ADMIN PANEL</span>
+            <p className="text-[22px] font-black uppercase tracking-[-0.04em] text-[#FB6503] sm:text-[26px] md:text-[34px]">LOGOIPSUM</p>
+            <span className="hidden rounded-full bg-[#F3F0EA] px-2 py-1 text-[10px] font-bold text-[#57534D] sm:inline-flex">ADMIN PANEL</span>
           </div>
-          <div className="flex items-center gap-3 text-[#6A6A6A]">
-            <button onClick={() => router.push('/admin/users')} className="text-sm">Back to User Management</button>
-            <span className="text-sm font-medium text-[#212121]">{user.name}</span>
+          <div className="flex items-center gap-2 text-[#6A6A6A] sm:gap-3">
+            <button onClick={() => router.push('/admin/users')} className="hidden text-sm sm:block">Back to User Management</button>
+            <NotificationBell />
+            <AdminUserMenu name={user.name} />
           </div>
         </div>
       </header>
 
-      <main className="mx-auto max-w-[1220px] px-4 py-6">
+      <main className="mx-auto max-w-[1220px] px-3 py-5 sm:px-4 md:px-6">
         <AdminNavTabs />
         {error && <div className="mb-4 rounded border border-[#FECACA] bg-[#FEF2F2] px-3 py-2 text-sm text-[#B91C1C]">{error}</div>}
 
@@ -129,25 +164,25 @@ export default function AdminUserDetailPage() {
                   <div className="flex h-16 w-16 items-center justify-center rounded-full bg-[#E5E7EB] text-[31px] font-medium text-[#4B5563]">{initials}</div>
                 )}
                 <div>
-                  <h1 className="text-[39px] font-bold text-[#1E1E1E]">{data.user.name}</h1>
-                  <div className="flex flex-wrap items-center gap-3 text-[16px] text-[#6A6A6A]">
+                  <h1 className="text-[30px] font-bold text-[#1E1E1E] sm:text-[34px] md:text-[39px]">{data.user.name}</h1>
+                  <div className="flex flex-wrap items-center gap-2 text-[14px] text-[#6A6A6A] sm:gap-3 sm:text-[16px]">
                     <span className="inline-flex items-center gap-1"><Shield className="h-3.5 w-3.5" /> ID: {data.user.id.slice(0, 8)}</span>
                     <span className="inline-flex items-center gap-1"><MapPin className="h-3.5 w-3.5" /> New York, USA</span>
                   </div>
                 </div>
               </div>
 
-              <div className="flex items-center gap-2">
-                <a href={`mailto:${data.user.email}`} className="inline-flex items-center gap-2 rounded-[8px] border border-[#D6D3D1] bg-white px-3 py-2 text-[16px] text-[#44403B]"><Mail className="h-4 w-4" />Email User</a>
-                <button className="rounded-[8px] bg-[#FB6503] px-3 py-2 text-[16px] text-white">Edit Profile</button>
+              <div className="flex w-full items-center gap-2 sm:w-auto">
+                <a href={`mailto:${data.user.email}`} className="inline-flex flex-1 items-center justify-center gap-2 rounded-[8px] border border-[#D6D3D1] bg-white px-3 py-2 text-[14px] text-[#44403B] sm:flex-none sm:text-[16px]"><Mail className="h-4 w-4" />Email User</a>
+                <button className="flex-1 rounded-[8px] bg-[#FB6503] px-3 py-2 text-[14px] text-white sm:flex-none sm:text-[16px]">Edit Profile</button>
               </div>
             </div>
 
             <div className="mt-5 grid grid-cols-1 gap-4 xl:grid-cols-[0.9fr_1.9fr]">
               <div className="space-y-4">
                 <section className="rounded-[10px] border border-[#E9E9E9] bg-white p-4">
-                  <h3 className="text-[31px] font-medium text-[#1E1E1E]">User Information</h3>
-                  <div className="mt-3 space-y-3 text-[16px] text-[#44403B]">
+                  <h3 className="text-[24px] font-medium text-[#1E1E1E] sm:text-[31px]">User Information</h3>
+                  <div className="mt-3 space-y-3 text-[14px] text-[#44403B] sm:text-[16px]">
                     <div>
                       <p className="text-[10px] uppercase text-[#999999]">Email Address</p>
                       <p className="inline-flex items-center gap-1">{data.user.email}<Copy className="h-3.5 w-3.5 text-[#9CA3AF]" /></p>
@@ -164,8 +199,8 @@ export default function AdminUserDetailPage() {
                 </section>
 
                 <section className="rounded-[10px] border border-[#E9E9E9] bg-white p-4">
-                  <h3 className="text-[31px] font-medium text-[#1E1E1E]">Account Status</h3>
-                  <div className="mt-3 text-[16px] text-[#44403B]">
+                  <h3 className="text-[24px] font-medium text-[#1E1E1E] sm:text-[31px]">Account Status</h3>
+                  <div className="mt-3 text-[14px] text-[#44403B] sm:text-[16px]">
                     <p className="text-[10px] uppercase text-[#999999]">Current Plan</p>
                     <div className="flex items-center justify-between">
                       <p>{data.user.subscriptionPlan}</p>
@@ -178,8 +213,31 @@ export default function AdminUserDetailPage() {
                   </div>
                   <div className="mt-3 space-y-2">
                     <button className="w-full rounded bg-[#FB6503] py-2 text-sm text-white">Reset Password</button>
-                    <button className="w-full rounded bg-[#DC2626] py-2 text-sm text-white">Suspend Account</button>
-                    <button className="inline-flex w-full items-center justify-center gap-1 rounded border border-[#FCA5A5] py-2 text-sm text-[#DC2626]"><Trash2 className="h-3.5 w-3.5" />Delete Data</button>
+                    <button
+                      onClick={() => runUserModerationAction(data.user.subscriptionStatus === 'CANCELLED' ? 'UNSUSPEND' : 'SUSPEND')}
+                      disabled={actionBusy !== null}
+                      className="w-full rounded bg-[#DC2626] py-2 text-sm text-white disabled:opacity-60"
+                    >
+                      {actionBusy === 'SUSPEND' || actionBusy === 'UNSUSPEND'
+                        ? 'Processing...'
+                        : data.user.subscriptionStatus === 'CANCELLED'
+                          ? 'Unsuspend Publisher'
+                          : 'Suspend Publisher'}
+                    </button>
+                    <button
+                      onClick={() => runUserModerationAction('ARCHIVE_CONTENT')}
+                      disabled={actionBusy !== null}
+                      className="inline-flex w-full items-center justify-center gap-1 rounded border border-[#FDBA74] py-2 text-sm text-[#C2410C] disabled:opacity-60"
+                    >
+                      Archive All Blogs
+                    </button>
+                    <button
+                      onClick={() => runUserModerationAction('REMOVE_CONTENT')}
+                      disabled={actionBusy !== null}
+                      className="inline-flex w-full items-center justify-center gap-1 rounded border border-[#FCA5A5] py-2 text-sm text-[#DC2626] disabled:opacity-60"
+                    >
+                      <Trash2 className="h-3.5 w-3.5" />Remove All Blogs
+                    </button>
                   </div>
                 </section>
               </div>
@@ -192,27 +250,41 @@ export default function AdminUserDetailPage() {
                 </div>
 
                 <section className="rounded-[10px] border border-[#E9E9E9] bg-white">
-                  <div className="flex items-center justify-between px-4 py-3">
-                    <h3 className="text-[31px] font-medium text-[#1E1E1E]">Payment History</h3>
+                  <div className="flex flex-wrap items-center justify-between gap-2 px-4 py-3">
+                    <h3 className="text-[24px] font-medium text-[#1E1E1E] sm:text-[31px]">Payment History</h3>
                     <button className="text-sm text-[#6A6A6A]"><Download className="mr-1 inline h-4 w-4" />Download Statement</button>
                   </div>
-                  <div className="grid grid-cols-[0.9fr_1.6fr_0.8fr_0.8fr] border-t border-[#F3F4F6] px-4 py-2 text-[10px] font-bold uppercase text-[#999999]">
+                  <div className="hidden grid-cols-[0.9fr_1.6fr_0.8fr_0.8fr] border-t border-[#F3F4F6] px-4 py-2 text-[10px] font-bold uppercase text-[#999999] md:grid">
                     <p>Date</p><p>Description</p><p>Amount</p><p>Status</p>
                   </div>
-                  {data.paymentHistory.map((row, idx) => (
-                    <div key={idx} className="grid grid-cols-[0.9fr_1.6fr_0.8fr_0.8fr] border-t border-[#F7F7F7] px-4 py-3 text-[16px]">
-                      <p className="text-[#6B7280]">{formatDate(row.date)}</p>
-                      <p className="text-[#44403B]">{row.description}</p>
-                      <p className="text-[#44403B]">₹{row.amount.toLocaleString('en-IN')}</p>
-                      <p className={row.status === 'PAID' ? 'text-[#16A34A]' : 'text-[#E11D48]'}>{row.status}</p>
-                    </div>
-                  ))}
+                  <div className="md:hidden">
+                    {data.paymentHistory.map((row, idx) => (
+                      <div key={idx} className="border-t border-[#F7F7F7] px-4 py-3 text-[14px]">
+                        <p className="font-semibold text-[#44403B]">{row.description}</p>
+                        <div className="mt-1 flex items-center justify-between">
+                          <p className="text-[#6B7280]">{formatDate(row.date)}</p>
+                          <p className="text-[#44403B]">₹{row.amount.toLocaleString('en-IN')}</p>
+                        </div>
+                        <p className={`mt-1 text-right ${row.status === 'PAID' ? 'text-[#16A34A]' : 'text-[#E11D48]'}`}>{row.status}</p>
+                      </div>
+                    ))}
+                  </div>
+                  <div className="hidden md:block">
+                    {data.paymentHistory.map((row, idx) => (
+                      <div key={idx} className="grid grid-cols-[0.9fr_1.6fr_0.8fr_0.8fr] border-t border-[#F7F7F7] px-4 py-3 text-[16px]">
+                        <p className="text-[#6B7280]">{formatDate(row.date)}</p>
+                        <p className="text-[#44403B]">{row.description}</p>
+                        <p className="text-[#44403B]">₹{row.amount.toLocaleString('en-IN')}</p>
+                        <p className={row.status === 'PAID' ? 'text-[#16A34A]' : 'text-[#E11D48]'}>{row.status}</p>
+                      </div>
+                    ))}
+                  </div>
                 </section>
 
                 <section className="rounded-[10px] border border-[#E9E9E9] bg-white">
-                  <h3 className="px-4 py-3 text-[31px] font-medium text-[#1E1E1E]">Recent Login History</h3>
+                  <h3 className="px-4 py-3 text-[24px] font-medium text-[#1E1E1E] sm:text-[31px]">Recent Login History</h3>
                   {data.loginHistory.map((log, idx) => (
-                    <div key={idx} className="grid grid-cols-[1.4fr_0.8fr] border-t border-[#F3F4F6] px-4 py-3 text-[16px]">
+                    <div key={idx} className="grid grid-cols-[1.4fr_0.8fr] border-t border-[#F3F4F6] px-4 py-3 text-[14px] sm:text-[16px]">
                       <div>
                         <p className={log.level === 'OK' ? 'text-[#1E1E1E]' : 'text-[#DC2626]'}>{log.event}</p>
                         <p className="text-[#6A6A6A]">{log.ipAddress} • {log.location}</p>
@@ -235,8 +307,9 @@ export default function AdminUserDetailPage() {
 function StatCard({ label, value }: { label: string; value: number }) {
   return (
     <div className="rounded-[10px] border border-[#E9E9E9] bg-white p-4 text-center">
-      <p className="text-[31px] font-medium text-[#1E1E1E]">{value}</p>
-      <p className="text-[16px] text-[#6A6A6A]">{label}</p>
+      <p className="text-[28px] font-medium text-[#1E1E1E] sm:text-[31px]">{value}</p>
+      <p className="text-[14px] text-[#6A6A6A] sm:text-[16px]">{label}</p>
+      <p className="mt-1 text-[12px] text-[#9CA3AF]">View All +</p>
     </div>
   );
 }

@@ -42,6 +42,13 @@ export async function POST(request: NextRequest) {
         const paymentId = payment.id;
         const notes = payment.notes;
 
+        if (String(payment.currency || '').toUpperCase() !== 'INR') {
+          return NextResponse.json(
+            { success: false, error: 'Invalid currency in webhook payment. Only INR is supported.' },
+            { status: 400 }
+          );
+        }
+
         if (notes && notes.userId && notes.plan) {
           // Calculate subscription dates
           const now = new Date();
@@ -74,7 +81,9 @@ export async function POST(request: NextRequest) {
                 billingPeriod: notes.billingPeriod,
                 paymentId,
                 orderId,
-                amount: payment.amount,
+                amountPaise: Number(payment.amount || 0),
+                amountInRupees: Number(payment.amount || 0) / 100,
+                currency: 'INR',
               },
             },
           });
@@ -97,6 +106,9 @@ export async function POST(request: NextRequest) {
                 billingPeriod: notes.billingPeriod,
                 paymentId: payment.id,
                 orderId: payment.order_id,
+                amountPaise: Number(payment.amount || 0),
+                amountInRupees: Number(payment.amount || 0) / 100,
+                currency: String(payment.currency || 'INR').toUpperCase(),
                 error: payment.error_description,
               },
             },
