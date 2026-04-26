@@ -143,7 +143,7 @@ export default function IndividualPlatformAnalyticsPage() {
 
   if (loading) {
     return (
-      <div className="p-8 bg-white min-h-screen flex items-center justify-center">
+      <div className="min-h-screen bg-white p-4 sm:p-6 lg:p-8 flex items-center justify-center">
         <Loader2 className="h-8 w-8 animate-spin text-neutral-400" />
       </div>
     )
@@ -151,7 +151,7 @@ export default function IndividualPlatformAnalyticsPage() {
 
   if (!analytics) {
     return (
-      <div className="p-8 bg-white min-h-screen flex items-center justify-center">
+      <div className="min-h-screen bg-white p-4 sm:p-6 lg:p-8 flex items-center justify-center">
         <div className="text-center">
           <p className="text-neutral-500">No data available</p>
           <Button onClick={fetchPlatformAnalytics} className="mt-4">
@@ -182,7 +182,7 @@ export default function IndividualPlatformAnalyticsPage() {
   })
 
   return (
-    <div className="p-8 bg-white min-h-screen">
+    <div className="min-h-screen bg-white p-4 sm:p-6 lg:p-8">
       {/* Header */}
       <div className="mb-8">
         <Button
@@ -194,7 +194,7 @@ export default function IndividualPlatformAnalyticsPage() {
           Back to Platform Analytics
         </Button>
 
-        <div className="flex items-center justify-between">
+        <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
           <div>
             <div className="flex items-center gap-3 mb-2">
               <h1 className="text-[26px] font-bold text-neutral-900 tracking-tight">
@@ -213,11 +213,11 @@ export default function IndividualPlatformAnalyticsPage() {
               </p>
             )}
           </div>
-          <div className="flex gap-3">
+          <div className="flex w-full flex-col gap-2 sm:w-auto sm:flex-row sm:gap-3">
             <Button
               onClick={() => router.push('/dashboard/analytics?tab=compare')}
               variant="outline"
-              className="h-9 text-[13px]"
+              className="h-9 w-full text-[13px] sm:w-auto"
             >
               <Share2 className="h-4 w-4 mr-2" />
               Compare Platforms
@@ -225,7 +225,7 @@ export default function IndividualPlatformAnalyticsPage() {
             <Button
               onClick={syncAnalytics}
               disabled={syncing}
-              className="bg-emerald-600 hover:bg-emerald-700 h-9 text-[13px]"
+              className="h-9 w-full bg-emerald-600 text-[13px] hover:bg-emerald-700 sm:w-auto"
             >
               {syncing ? (
                 <>
@@ -433,7 +433,7 @@ export default function IndividualPlatformAnalyticsPage() {
                         <h3 className="text-[14px] font-semibold text-neutral-900 mb-2">
                           {article.articleTitle}
                         </h3>
-                        <div className="flex items-center gap-4 text-[12px] text-neutral-500">
+                        <div className="flex flex-wrap items-center gap-3 text-[12px] text-neutral-500">
                           <span className="flex items-center gap-1">
                             <Eye className="h-3 w-3" />
                             {platformData.views.toLocaleString()} views

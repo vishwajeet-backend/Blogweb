@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useMemo, useState } from 'react';
-import { useRouter } from 'next/navigation';
+import { useRouter, useSearchParams } from 'next/navigation';
 import { Link2, Loader2, Save } from 'lucide-react';
 import { useAuth } from '@/lib/context/AuthContext';
 import { AdminNavTabs } from '@/components/layout/admin-nav-tabs';
@@ -33,6 +33,9 @@ type FormState = {
 export default function AdminSettingsPage() {
   const { user, loading } = useAuth();
   const router = useRouter();
+  const searchParams = useSearchParams();
+  const embedded = searchParams.get('embedded') === '1';
+  const toEmbedded = (path: string) => (embedded ? `${path}${path.includes('?') ? '&' : '?'}embedded=1` : path);
 
   const [profile, setProfile] = useState<ProfileData | null>(null);
   const [form, setForm] = useState<FormState>({
@@ -129,11 +132,11 @@ export default function AdminSettingsPage() {
   return (
     <div className="min-h-screen bg-[#FAF9F6]" style={{ fontFamily: 'Satoshi, var(--font-geist-sans), sans-serif' }}>
       <div className="mx-auto max-w-[980px] px-3 py-5 sm:px-4 md:px-6">
-        <div className="flex items-center justify-between border-b border-[#E7E5E4] pb-3">
+        {!embedded && <div className="flex items-center justify-between border-b border-[#E7E5E4] pb-3">
           <p className="text-[22px] font-bold text-[#1C1917]">Admin Panel</p>
-        </div>
+        </div>}
 
-        <AdminNavTabs />
+        {!embedded && <AdminNavTabs />}
 
         <main className="mt-2">
           <div>
@@ -237,7 +240,7 @@ export default function AdminSettingsPage() {
               </section>
 
               <div className="flex flex-col-reverse justify-end gap-2 border-t border-[#E7E5E4] pt-6 sm:flex-row">
-                <button onClick={() => router.push('/admin')} className="rounded-[8px] border border-[#D6D3D1] bg-white px-4 py-2 text-[14px] text-[#44403B] sm:text-[16px]">
+                <button onClick={() => router.push(toEmbedded('/admin/users'))} className="rounded-[8px] border border-[#D6D3D1] bg-white px-4 py-2 text-[14px] text-[#44403B] sm:text-[16px]">
                   Cancel
                 </button>
                 <button

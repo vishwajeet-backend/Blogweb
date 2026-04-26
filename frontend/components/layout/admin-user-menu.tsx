@@ -1,7 +1,8 @@
 "use client"
 
 import { useEffect, useRef, useState } from "react"
-import { ChevronDown, LogOut } from "lucide-react"
+import { ChevronDown, LogOut, UserCog } from "lucide-react"
+import { usePathname, useRouter } from "next/navigation"
 import { useAuth } from "@/lib/context/AuthContext"
 
 type AdminUserMenuProps = {
@@ -10,8 +11,12 @@ type AdminUserMenuProps = {
 
 export function AdminUserMenu({ name }: AdminUserMenuProps) {
   const { logout } = useAuth()
+  const router = useRouter()
+  const pathname = usePathname()
   const [open, setOpen] = useState(false)
   const wrapperRef = useRef<HTMLDivElement | null>(null)
+  const isEmbeddedAdmin = pathname?.startsWith("/dashboard/admin")
+  const profilePath = isEmbeddedAdmin ? "/dashboard/admin/settings" : "/admin/settings"
 
   useEffect(() => {
     const onDocClick = (event: MouseEvent) => {
@@ -38,6 +43,17 @@ export function AdminUserMenu({ name }: AdminUserMenuProps) {
 
       {open ? (
         <div className="absolute right-0 z-50 mt-2 w-[170px] rounded-lg border border-[#E7E5E4] bg-white p-1 shadow-lg">
+          <button
+            type="button"
+            onClick={() => {
+              setOpen(false)
+              router.push(profilePath)
+            }}
+            className="mb-1 flex w-full items-center gap-2 rounded-md px-3 py-2 text-left text-sm font-medium text-[#44403B] hover:bg-[#F5F5F4]"
+          >
+            <UserCog className="h-4 w-4" />
+            Profile Settings
+          </button>
           <button
             type="button"
             onClick={logout}

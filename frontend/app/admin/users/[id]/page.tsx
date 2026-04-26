@@ -1,7 +1,8 @@
 "use client";
 
 import { useEffect, useMemo, useState } from 'react';
-import { useParams, useRouter } from 'next/navigation';
+import { useParams, useRouter, useSearchParams } from 'next/navigation';
+import Link from 'next/link';
 import { Copy, Download, Mail, MapPin, Shield, Trash2 } from 'lucide-react';
 import { useAuth } from '@/lib/context/AuthContext';
 import { AdminNavTabs } from '@/components/layout/admin-nav-tabs';
@@ -56,6 +57,9 @@ function formatDate(date: string) {
 export default function AdminUserDetailPage() {
   const { user, loading } = useAuth();
   const router = useRouter();
+  const searchParams = useSearchParams();
+  const embedded = searchParams.get('embedded') === '1';
+  const toEmbedded = (path: string) => (embedded ? `${path}${path.includes('?') ? '&' : '?'}embedded=1` : path);
   const params = useParams<{ id: string }>();
   const [data, setData] = useState<DetailResponse | null>(null);
   const [loadingData, setLoadingData] = useState(true);
@@ -134,22 +138,24 @@ export default function AdminUserDetailPage() {
 
   return (
     <div className="min-h-screen bg-[#FAF9F6]" style={{ fontFamily: 'Satoshi, var(--font-geist-sans), sans-serif' }}>
-      <header className="border-b border-[#E9E9E9] bg-white px-3 py-3 sm:px-4">
+      {!embedded && <header className="border-b border-[#E9E9E9] bg-white px-3 py-3 sm:px-4">
         <div className="mx-auto flex max-w-[1220px] items-center justify-between gap-2">
           <div className="flex items-center gap-3">
-            <p className="text-[22px] font-black uppercase tracking-[-0.04em] text-[#FB6503] sm:text-[26px] md:text-[34px]">PublishType</p>
+            <Link href="/" className="text-[22px] font-black uppercase tracking-[-0.04em] text-[#FB6503] sm:text-[26px] md:text-[34px]">
+              PublishType
+            </Link>
             <span className="hidden rounded-full bg-[#F3F0EA] px-2 py-1 text-[10px] font-bold text-[#57534D] sm:inline-flex">ADMIN PANEL</span>
           </div>
           <div className="flex items-center gap-2 text-[#6A6A6A] sm:gap-3">
-            <button onClick={() => router.push('/admin/users')} className="hidden text-sm sm:block">Back to User Management</button>
+            <button onClick={() => router.push(toEmbedded('/admin/users'))} className="hidden text-sm sm:block">Back to User Management</button>
             <NotificationBell />
             <AdminUserMenu name={user.name} />
           </div>
         </div>
-      </header>
+      </header>}
 
       <main className="mx-auto max-w-[1220px] px-3 py-5 sm:px-4 md:px-6">
-        <AdminNavTabs />
+        {!embedded && <AdminNavTabs />}
         {error && <div className="mb-4 rounded border border-[#FECACA] bg-[#FEF2F2] px-3 py-2 text-sm text-[#B91C1C]">{error}</div>}
 
         {loadingData || !data ? (
@@ -202,7 +208,7 @@ export default function AdminUserDetailPage() {
                   <h3 className="text-[24px] font-medium text-[#1E1E1E] sm:text-[31px]">Account Status</h3>
                   <div className="mt-3 text-[14px] text-[#44403B] sm:text-[16px]">
                     <p className="text-[10px] uppercase text-[#999999]">Current Plan</p>
-                    <div className="flex items-center justify-between">
+                    <div className="flex flex-wrap items-center justify-between gap-2">
                       <p>{data.user.subscriptionPlan}</p>
                       <span className="rounded bg-[#D1FAE5] px-2 py-0.5 text-[10px] font-bold text-[#16A34A]">{data.user.subscriptionStatus}</span>
                     </div>
@@ -284,12 +290,12 @@ export default function AdminUserDetailPage() {
                 <section className="rounded-[10px] border border-[#E9E9E9] bg-white">
                   <h3 className="px-4 py-3 text-[24px] font-medium text-[#1E1E1E] sm:text-[31px]">Recent Login History</h3>
                   {data.loginHistory.map((log, idx) => (
-                    <div key={idx} className="grid grid-cols-[1.4fr_0.8fr] border-t border-[#F3F4F6] px-4 py-3 text-[14px] sm:text-[16px]">
+                    <div key={idx} className="grid gap-1 border-t border-[#F3F4F6] px-4 py-3 text-[14px] sm:grid-cols-[1.4fr_0.8fr] sm:text-[16px]">
                       <div>
                         <p className={log.level === 'OK' ? 'text-[#1E1E1E]' : 'text-[#DC2626]'}>{log.event}</p>
                         <p className="text-[#6A6A6A]">{log.ipAddress} • {log.location}</p>
                       </div>
-                      <div className="text-right">
+                      <div className="text-left sm:text-right">
                         <p className={log.current ? 'text-[#16A34A]' : 'text-[#6A6A6A]'}>{log.current ? 'Current Session' : formatDate(log.date)}</p>
                       </div>
                     </div>

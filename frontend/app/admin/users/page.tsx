@@ -1,7 +1,8 @@
 "use client";
 
 import { useEffect, useMemo, useState } from 'react';
-import { useRouter } from 'next/navigation';
+import { useRouter, useSearchParams } from 'next/navigation';
+import Link from 'next/link';
 import { CreditCard, Download, FileText, Loader2, RefreshCw, Search, Settings, ShieldCheck, Users } from 'lucide-react';
 import { useAuth } from '@/lib/context/AuthContext';
 import { AdminNavTabs } from '@/components/layout/admin-nav-tabs';
@@ -70,6 +71,9 @@ function formatMoneyInr(amount: number) {
 export default function AdminUsersIndexPage() {
   const { user, loading } = useAuth();
   const router = useRouter();
+  const searchParams = useSearchParams();
+  const embedded = searchParams.get('embedded') === '1';
+  const toEmbedded = (path: string) => (embedded ? `${path}${path.includes('?') ? '&' : '?'}embedded=1` : path);
 
   const [data, setData] = useState<OverviewResponse | null>(null);
   const [search, setSearch] = useState('');
@@ -121,29 +125,31 @@ export default function AdminUsersIndexPage() {
 
   return (
     <div className="min-h-screen bg-[#FAF9F6]" style={{ fontFamily: 'Satoshi, var(--font-geist-sans), sans-serif' }}>
-      <header className="border-b border-[#E9E9E9] bg-white/90 px-3 py-3 sm:px-4 md:px-6">
+      {!embedded && <header className="border-b border-[#E9E9E9] bg-white/90 px-3 py-3 sm:px-4 md:px-6">
         <div className="mx-auto flex max-w-[1220px] items-center justify-between gap-2 sm:gap-3">
           <div className="flex items-center gap-3">
-            <p className="text-[22px] font-black uppercase tracking-[-0.04em] text-[#FB6503] sm:text-[26px] md:text-[34px]">PublishType</p>
+            <Link href="/" className="text-[22px] font-black uppercase tracking-[-0.04em] text-[#FB6503] sm:text-[26px] md:text-[34px]">
+              PublishType
+            </Link>
             <span className="hidden rounded-full bg-[#F3F0EA] px-2 py-1 text-[10px] font-bold text-[#57534D] sm:inline-flex">ADMIN PANEL</span>
           </div>
           <div className="flex min-w-0 items-center gap-2 text-[#6A6A6A] sm:gap-3">
             <NotificationBell />
             <div className="flex h-8 w-8 items-center justify-center rounded-full bg-[#E5E7EB] text-xs font-bold">{user.name.slice(0, 2).toUpperCase()}</div>
             <AdminUserMenu name={user.name} />
-            <button onClick={() => router.push('/admin/settings')} aria-label="Open settings" className="hidden sm:block">
+            <button onClick={() => router.push(toEmbedded('/admin/settings'))} aria-label="Open settings" className="hidden sm:block">
               <Settings className="h-4 w-4" />
             </button>
           </div>
         </div>
-      </header>
+      </header>}
 
       <main className="mx-auto max-w-[1220px] px-3 py-5 sm:px-4 md:px-6">
         <div className="flex flex-wrap items-start justify-between gap-3">
           <div>
             <h1 className="text-[28px] font-bold text-[#1E1E1E] sm:text-[32px] md:text-[39px]">Admin Overview</h1>
             <p className="mt-1 text-[14px] font-medium text-[#6A6A6A] sm:text-[16px]">System metrics and platform management.</p>
-            <AdminNavTabs />
+            {!embedded && <AdminNavTabs />}
           </div>
           <div className="flex w-full flex-wrap gap-2 sm:w-auto">
             <button className="flex items-center gap-2 rounded-[8px] border border-[#D6D3D1] bg-white px-3 py-2 text-[13px] font-medium text-[#44403B] sm:text-[14px] md:text-[16px]">
@@ -170,13 +176,13 @@ export default function AdminUsersIndexPage() {
             <div className="flex flex-wrap items-center justify-between gap-2 px-4 py-3">
               <h2 className="text-[24px] font-medium text-[#1E1E1E] sm:text-[28px] md:text-[31px]">User Management</h2>
               <div className="flex items-center gap-2">
-                <div className="flex items-center gap-2 rounded-[8px] border border-[#E9E9E9] px-3 py-2">
+                <div className="flex min-w-0 items-center gap-2 rounded-[8px] border border-[#E9E9E9] px-3 py-2">
                   <Search className="h-4 w-4 text-[#9CA3AF]" />
                   <input
                     value={search}
                     onChange={(e) => setSearch(e.target.value)}
                     placeholder="Search users..."
-                    className="w-28 bg-transparent text-sm outline-none sm:w-36 md:w-40"
+                    className="w-full min-w-0 bg-transparent text-sm outline-none sm:w-36 md:w-40"
                   />
                 </div>
                 <button className="rounded-[8px] border border-[#E9E9E9] px-3 py-2 text-sm text-[#6A6A6A]">All Status</button>
@@ -195,7 +201,7 @@ export default function AdminUsersIndexPage() {
               filteredUsers.map((u) => (
                 <div key={u.id} className="border-t border-[#F7F7F7] px-4 py-3">
                   <div className="hidden grid-cols-[1.4fr_0.8fr_0.8fr_0.6fr] items-center md:grid">
-                    <button onClick={() => router.push(`/admin/users/${u.id}`)} className="flex items-center gap-2 text-left">
+                    <button onClick={() => router.push(toEmbedded(`/admin/users/${u.id}`))} className="flex items-center gap-2 text-left">
                       {u.avatar ? (
                         <img src={u.avatar} alt={u.name} className="h-8 w-8 rounded-full object-cover" />
                       ) : (
@@ -208,7 +214,7 @@ export default function AdminUsersIndexPage() {
                     </button>
                     <p className="text-[16px] text-[#44403B]">{u.plan}</p>
                     <span className={`w-fit rounded-full px-2 py-0.5 text-[10px] font-bold ${statusPill(u.status)}`}>{u.status}</span>
-                    <button onClick={() => router.push(`/admin/users/${u.id}`)} className="text-sm text-[#1E40AF] underline underline-offset-2">View</button>
+                    <button onClick={() => router.push(toEmbedded(`/admin/users/${u.id}`))} className="text-sm text-[#1E40AF] underline underline-offset-2">View</button>
                   </div>
 
                   <div className="space-y-1 md:hidden">
@@ -217,7 +223,7 @@ export default function AdminUsersIndexPage() {
                     <p className="text-[12px] text-[#6A6A6A]">Plan: {u.plan} · Posts: {u.articlesCount}</p>
                     <div className="flex items-center justify-between">
                       <span className={`w-fit rounded-full px-2 py-0.5 text-[10px] font-bold ${statusPill(u.status)}`}>{u.status}</span>
-                      <button onClick={() => router.push(`/admin/users/${u.id}`)} className="text-sm text-[#1E40AF] underline underline-offset-2">View</button>
+                      <button onClick={() => router.push(toEmbedded(`/admin/users/${u.id}`))} className="text-sm text-[#1E40AF] underline underline-offset-2">View</button>
                     </div>
                   </div>
                 </div>
@@ -249,8 +255,8 @@ export default function AdminUsersIndexPage() {
                       <span className="rounded bg-white px-2 py-1">{q.age}</span>
                     </div>
                     <div className="mt-2 flex gap-2">
-                      <button onClick={() => router.push(`/admin/moderation?search=${encodeURIComponent(q.title)}`)} className="flex-1 rounded border border-[#E5E7EB] bg-white py-1.5 text-[10px] font-bold text-[#6B7280]">Review</button>
-                      <button onClick={() => router.push(`/admin/moderation?search=${encodeURIComponent(q.title)}`)} className={`flex-1 rounded py-1.5 text-[10px] font-bold text-white ${q.status === 'SCHEDULED' ? 'bg-[#FB6503]' : 'bg-[#E11D48]'}`}>Open Moderation</button>
+                      <button onClick={() => router.push(toEmbedded(`/admin/moderation?search=${encodeURIComponent(q.title)}`))} className="flex-1 rounded border border-[#E5E7EB] bg-white py-1.5 text-[10px] font-bold text-[#6B7280]">Review</button>
+                      <button onClick={() => router.push(toEmbedded(`/admin/moderation?search=${encodeURIComponent(q.title)}`))} className={`flex-1 rounded py-1.5 text-[10px] font-bold text-white ${q.status === 'SCHEDULED' ? 'bg-[#FB6503]' : 'bg-[#E11D48]'}`}>Open Moderation</button>
                     </div>
                   </div>
                 ))}

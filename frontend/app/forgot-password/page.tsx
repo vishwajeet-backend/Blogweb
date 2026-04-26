@@ -29,123 +29,63 @@ export default function ForgotPasswordPage() {
     }
   }
 
-  const inputStyle = {
-    width: '100%',
-    padding: '16px 24px',
-    borderRadius: '50px',
-    border: '1px solid #eee',
-    backgroundColor: '#f9f9f9',
-    fontSize: '15px',
-    outline: 'none',
-    transition: 'all 0.2s',
-    marginBottom: '24px'
-  }
-
   return (
-    <div style={{
-      backgroundImage: 'linear-gradient(rgba(255, 255, 255, 0.4), rgba(255, 255, 255, 0.4)), url("/design/BG%2023-01%202.png")',
-      backgroundSize: 'cover',
-      backgroundPosition: 'center',
-      minHeight: '100vh',
-      display: 'flex',
-      flexDirection: 'column'
-    }}>
-
-      {/* Mini Header */}
-      <header style={{ padding: '24px 40px', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-        <Link href="/" style={{ display: 'flex', alignItems: 'center', gap: '8px', textDecoration: 'none' }}>
-          <div style={{ width: '32px', height: '32px', backgroundColor: '#FF7A33', borderRadius: '8px' }}></div>
-          <span style={{ fontSize: '20px', fontWeight: 800, color: '#1a1a1a' }}>PublishType</span>
-        </Link>
+    <div className="min-h-screen bg-[linear-gradient(rgba(255,255,255,0.75),rgba(255,255,255,0.75)),url('/design/BG%2023-01%202.png')] bg-cover bg-center text-[#212121]">
+      <header className="border-b border-[#e9e9e9] px-4 py-4 sm:px-6 md:px-10">
+        <div className="mx-auto flex max-w-[1360px] items-center justify-between">
+          <Link href="/" className="flex items-center gap-2 no-underline">
+            <div className="h-7 w-7 rounded-md bg-[#FF7A33]" />
+            <span className="text-xl font-extrabold text-[#1a1a1a] sm:text-2xl">PublishType</span>
+          </Link>
+        </div>
       </header>
 
-      {/* Main Content */}
-      <div style={{ flex: 1, display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '40px 24px' }}>
-        <div style={{
-          backgroundColor: 'rgba(255, 255, 255, 0.9)',
-          backdropFilter: 'blur(20px)',
-          borderRadius: '48px',
-          padding: '60px',
-          width: '100%',
-          maxWidth: '540px',
-          boxShadow: '0 30px 60px rgba(0,0,0,0.05)',
-          textAlign: 'center'
-        }}>
+      <div className="mx-auto flex max-w-[1360px] flex-1 items-center justify-center px-4 py-7 sm:py-10 md:py-14">
+        <div className="w-full max-w-[540px] rounded-[28px] border border-[#e9e9e9] bg-[rgba(255,255,255,0.65)] p-4 shadow-[0_14px_40px_rgba(0,0,0,0.06)] backdrop-blur-[15px] sm:p-6">
           {isSubmitted ? (
-            <div>
-              <div style={{ width: '80px', height: '80px', backgroundColor: 'rgba(255, 122, 51, 0.1)', borderRadius: '50%', display: 'flex', alignItems: 'center', justifyContent: 'center', margin: '0 auto 32px', color: '#FF7A33' }}>
+            <div className="py-6 text-center sm:py-8">
+              <div className="mx-auto mb-7 flex h-20 w-20 items-center justify-center rounded-full bg-[rgba(255,122,51,0.1)] text-[#FF7A33]">
                 <MailCheck size={40} strokeWidth={2} />
               </div>
-              <h1 style={{ fontSize: '32px', fontWeight: 800, marginBottom: '16px', color: '#1a1a1a' }}>Check your email</h1>
-              <p style={{ color: '#666', fontSize: '16px', lineHeight: '1.6', marginBottom: '32px' }}>
+              <h1 className="mb-3 text-[30px] font-extrabold text-[#1a1a1a] sm:text-[32px]">Check your email</h1>
+              <p className="mx-auto mb-7 max-w-[460px] text-[14px] leading-7 text-[#666] sm:text-base">
                 We've sent reset instructions to <strong>{email}</strong>. If an account exists, you'll receive a link shortly.
               </p>
-              <Link href="/login" style={{
-                color: '#FF7A33',
-                fontSize: '15px',
-                fontWeight: 800,
-                textDecoration: 'none',
-                display: 'flex',
-                alignItems: 'center',
-                justifyContent: 'center',
-                gap: '8px'
-              }}>
+              <Link href="/login" className="inline-flex items-center justify-center gap-2 text-[15px] font-extrabold text-[#FF7A33] no-underline">
                 <ArrowLeft size={18} /> Back to Login
               </Link>
             </div>
           ) : (
             <>
-              <h1 style={{ fontSize: '32px', fontWeight: 800, marginBottom: '16px', color: '#1a1a1a' }}>Reset Password</h1>
-              <p style={{ color: '#666', fontSize: '15px', marginBottom: '40px', lineHeight: '1.6' }}>
-                Enter your email address and we'll send you a link to reset your password.
-              </p>
+              <div className="text-center">
+                <h1 className="text-[34px] font-bold leading-tight sm:text-4xl">Reset Password</h1>
+                <p className="mt-2 text-[14px] leading-6 text-[#666] sm:text-[15px]">
+                  Enter your email and we&apos;ll send you a reset link.
+                </p>
+              </div>
 
-              <form onSubmit={handleSubmit} style={{ textAlign: 'left' }}>
+              <form onSubmit={handleSubmit} className="mt-6 space-y-4 text-left">
                 <div>
-                  <label style={{ fontSize: '13px', fontWeight: 800, color: '#1a1a1a', marginBottom: '8px', display: 'block' }}>Email Address</label>
+                  <label className="mb-1 block text-[12px] font-extrabold uppercase tracking-[0.05em] text-[#1a1a1a]">Email Address</label>
                   <input
                     type="email"
                     placeholder="john@example.com"
                     value={email}
                     onChange={(e) => setEmail(e.target.value)}
                     required
-                    style={inputStyle}
+                    className="h-12 w-full rounded-full border border-[#eee] bg-[#f9f9f9] px-5 text-[14px] outline-none sm:h-14"
                   />
                 </div>
 
                 <button
                   type="submit"
                   disabled={isLoading}
-                  style={{
-                    width: '100%',
-                    backgroundColor: '#FF7A33',
-                    color: 'white',
-                    padding: '18px',
-                    borderRadius: '50px',
-                    border: 'none',
-                    fontSize: '16px',
-                    fontWeight: 800,
-                    cursor: 'pointer',
-                    boxShadow: '0 8px 25px rgba(255, 122, 51, 0.3)',
-                    display: 'flex',
-                    alignItems: 'center',
-                    justifyContent: 'center',
-                    gap: '10px'
-                  }}>
+                  className="mt-1 flex h-12 w-full items-center justify-center gap-2 rounded-full bg-[#FF7A33] text-[15px] font-extrabold text-white shadow-[0_8px_25px_rgba(255,122,51,0.3)] sm:h-14 sm:text-base"
+                >
                   {isLoading ? <Loader2 className="animate-spin" size={20} /> : 'Send Reset Link'}
                 </button>
 
-                <Link href="/login" style={{
-                  marginTop: '32px',
-                  color: '#999',
-                  fontSize: '14px',
-                  fontWeight: 700,
-                  textDecoration: 'none',
-                  display: 'flex',
-                  alignItems: 'center',
-                  justifyContent: 'center',
-                  gap: '8px'
-                }}>
+                <Link href="/login" className="mt-5 inline-flex w-full items-center justify-center gap-2 text-[13px] font-bold text-[#999] no-underline sm:text-[14px]">
                   <ArrowLeft size={16} /> Back to Login
                 </Link>
               </form>
@@ -154,12 +94,12 @@ export default function ForgotPasswordPage() {
         </div>
       </div>
 
-      <footer style={{ padding: '24px 40px', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-        <div style={{ display: 'flex', gap: '24px' }}>
-          <Link href="/privacy" style={{ fontSize: '13px', color: '#999', textDecoration: 'none', fontWeight: 600 }}>Privacy Policy</Link>
-          <Link href="/terms" style={{ fontSize: '13px', color: '#999', textDecoration: 'none', fontWeight: 600 }}>Term & Condition</Link>
+      <footer className="mx-auto flex w-full max-w-[1360px] flex-wrap items-center justify-between gap-3 px-4 pb-5 text-[12px] text-[#999] sm:px-6 sm:text-[13px] md:px-10">
+        <div className="flex gap-4 sm:gap-6">
+          <Link href="/privacy" className="font-semibold text-[#999] no-underline">Privacy Policy</Link>
+          <Link href="/terms" className="font-semibold text-[#999] no-underline">Term & Condition</Link>
         </div>
-        <p style={{ margin: 0, fontSize: '13px', color: '#999', fontWeight: 600 }}>
+        <p className="m-0 font-semibold text-[#999]">
           © {new Date().getFullYear()} PublishType. All Rights Reserved.
         </p>
       </footer>

@@ -177,9 +177,9 @@ export default function PlatformsPage() {
   }
 
   return (
-    <div className="p-8">
+    <div className="p-4 sm:p-6 lg:p-8">
       <div className="mb-8">
-        <h1 className="text-3xl font-bold">Publishing Platforms</h1>
+        <h1 className="text-2xl font-bold sm:text-3xl">Publishing Platforms</h1>
         <p className="mt-1 text-neutral-600">Connect and manage your publishing destinations</p>
       </div>
 
@@ -190,7 +190,7 @@ export default function PlatformsPage() {
             <Card key={platform.key}>
               <CardHeader>
                 <div className="flex items-start justify-between">
-                  <div>
+                  <div className="min-w-0">
                     <CardTitle className="flex items-center gap-2">
                       {platform.name}
                       <Badge variant="success" className="text-xs">
@@ -206,7 +206,7 @@ export default function PlatformsPage() {
                 <div className="space-y-3">
                   <div>
                     <p className="text-sm text-neutral-600">Site URL / Handle</p>
-                    <p className="text-sm font-medium">{platform.siteUrl || "N/A"}</p>
+                    <p className="break-all text-sm font-medium">{platform.siteUrl || "N/A"}</p>
                   </div>
                   <div>
                     <p className="text-sm text-neutral-600">Published Articles</p>

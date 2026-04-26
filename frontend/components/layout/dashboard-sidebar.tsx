@@ -12,7 +12,10 @@ import {
   Settings,
   HelpCircle,
   Star,
-  ShieldCheck,
+  Users,
+  FileText,
+  Flag,
+  UserCog,
 } from "lucide-react"
 import { cn } from "@/lib/utils"
 import { useAuth } from "@/lib/context/AuthContext"
@@ -54,7 +57,12 @@ export function DashboardSidebar({ className, onNavigate }: { className?: string
   ]
 
   const adminNavItems: NavItem[] = user?.role === "ADMIN"
-    ? [{ name: "Admin Panel", href: "/admin/users", icon: ShieldCheck }]
+    ? [
+      { name: "User Management", href: "/dashboard/admin/users", icon: Users },
+      { name: "All Articles", href: "/dashboard/admin/articles", icon: FileText },
+      { name: "Moderation", href: "/dashboard/admin/moderation", icon: Flag },
+      { name: "Profile Settings", href: "/dashboard/admin/settings", icon: UserCog },
+    ]
     : []
 
   return (
@@ -67,7 +75,7 @@ export function DashboardSidebar({ className, onNavigate }: { className?: string
     >
       <div className="flex min-h-0 flex-1 flex-col gap-10">
         <div className="flex h-14 items-center border-b border-[#E9E9E9] px-2.5">
-          <Link href="/dashboard" className="text-[34px] font-black uppercase tracking-[-0.04em] text-[#FB6503]">
+          <Link href="/" className="text-[28px] font-black uppercase tracking-[-0.04em] text-[#FB6503] md:text-[34px]">
             PublishType
           </Link>
         </div>
@@ -95,7 +103,7 @@ export function DashboardSidebar({ className, onNavigate }: { className?: string
                     key={item.href}
                     href={item.href}
                     onClick={onNavigate}
-                    className={`flex items-center gap-3 rounded-2xl px-3 py-4 text-base font-medium transition-colors ${
+                    className={`flex items-center gap-3 rounded-2xl px-3 py-3.5 text-sm font-medium transition-colors md:py-4 md:text-base ${
                       active
                         ? "bg-[#FFFAF3] text-black dark:bg-[#2A2A2A] dark:text-white"
                         : "text-[#212121] hover:bg-[#FFFBF7] dark:text-[#E5E5E5] dark:hover:bg-[#242424]"
@@ -120,7 +128,7 @@ export function DashboardSidebar({ className, onNavigate }: { className?: string
                     key={item.href}
                     href={item.href}
                     onClick={onNavigate}
-                    className={`flex items-center gap-3 rounded-2xl px-3 py-4 text-base font-medium transition-colors ${
+                    className={`flex items-center gap-3 rounded-2xl px-3 py-3.5 text-sm font-medium transition-colors md:py-4 md:text-base ${
                       active
                         ? "bg-[#FFFAF3] text-black dark:bg-[#2A2A2A] dark:text-white"
                         : "text-[#212121] hover:bg-[#FFFBF7] dark:text-[#E5E5E5] dark:hover:bg-[#242424]"

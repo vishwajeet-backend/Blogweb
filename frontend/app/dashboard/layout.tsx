@@ -25,11 +25,11 @@ export default function DashboardLayout({
           <div className="fixed inset-0 z-50 md:hidden">
             <button
               type="button"
-              className="absolute inset-0 bg-black/40"
+              className="absolute inset-0 bg-black/45 backdrop-blur-[2px]"
               onClick={() => setMobileSidebarOpen(false)}
               aria-label="Close menu overlay"
             />
-            <div className="relative z-10 h-full w-[86vw] max-w-[320px] transition-transform duration-200">
+            <div className="relative z-10 h-full w-[84vw] max-w-[320px] rounded-r-3xl shadow-2xl transition-transform duration-200">
               <button
                 type="button"
                 className="absolute right-3 top-3 z-20 rounded-full bg-white/90 p-1.5 text-[#212121] shadow"
@@ -38,7 +38,7 @@ export default function DashboardLayout({
               >
                 <X className="h-4 w-4" />
               </button>
-              <DashboardSidebar className="h-full w-full" onNavigate={() => setMobileSidebarOpen(false)} />
+              <DashboardSidebar className="h-full w-full rounded-r-3xl" onNavigate={() => setMobileSidebarOpen(false)} />
             </div>
           </div>
         )}

@@ -121,7 +121,7 @@ export async function GET(request: NextRequest) {
     })
 
     // Redirect based on role with tokens
-    const redirectPath = user.role === 'ADMIN' ? '/admin/users' : '/dashboard'
+    const redirectPath = '/dashboard'
     const redirectUrl = new URL(redirectPath, process.env.APP_URL || 'http://localhost:3000')
     redirectUrl.searchParams.set('accessToken', accessToken)
     redirectUrl.searchParams.set('refreshToken', refreshToken)

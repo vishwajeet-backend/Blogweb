@@ -69,12 +69,6 @@ export default function DashboardPage() {
   }, [loading, user, router])
 
   useEffect(() => {
-    if (!loading && user?.role === "ADMIN") {
-      router.replace("/admin/users")
-    }
-  }, [loading, user, router])
-
-  useEffect(() => {
     if (!user) return
 
     const fetchDashboardData = async () => {
@@ -129,7 +123,7 @@ export default function DashboardPage() {
     })
   }, [connections])
 
-  if (loading || loadingData || user?.role === "ADMIN") {
+  if (loading || loadingData) {
     return <DashboardSkeleton />
   }
 

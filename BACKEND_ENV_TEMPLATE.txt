@@ -1,0 +1,72 @@
+# Backend Environment Variables Template
+# Copy this to backend/.env and fill in your actual values
+
+# ========================================
+# DATABASE
+# ========================================
+DATABASE_URL="postgresql://blogweb_user:YOUR_SECURE_PASSWORD@localhost:5432/blogweb_db"
+
+# ========================================
+# SERVER
+# ========================================
+PORT=5000
+NODE_ENV=production
+
+# ========================================
+# JWT & SECURITY
+# ========================================
+JWT_SECRET=your_super_secret_jwt_key_min_32_chars_long
+JWT_EXPIRE=7d
+
+# ========================================
+# PAYMENT GATEWAY (Razorpay)
+# ========================================
+RAZORPAY_KEY_ID=your_razorpay_key_id_from_dashboard
+RAZORPAY_KEY_SECRET=your_razorpay_key_secret_from_dashboard
+
+# ========================================
+# EMAIL CONFIGURATION (Optional)
+# ========================================
+SMTP_HOST=smtp.gmail.com
+SMTP_PORT=587
+SMTP_USER=your_email@gmail.com
+SMTP_PASS=your_app_specific_password
+SMTP_FROM=noreply@yourdomain.com
+
+# ========================================
+# CORS & FRONTEND
+# ========================================
+FRONTEND_URL=https://yourdomain.com
+ALLOWED_ORIGINS=https://yourdomain.com,https://www.yourdomain.com
+
+# ========================================
+# SOCIAL MEDIA INTEGRATIONS (Optional)
+# ========================================
+# Dev.to Integration
+DEVTO_API_KEY=your_devto_api_key
+
+# Hashnode Integration
+HASHNODE_API_KEY=your_hashnode_api_key
+
+# Ghost CMS Integration
+GHOST_API_URL=https://your-ghost-instance.com
+GHOST_API_KEY=your_ghost_api_key
+
+# ========================================
+# MONITORING & LOGGING (Optional)
+# ========================================
+LOG_LEVEL=info
+# Sentry Integration (if using)
+# SENTRY_DSN=your_sentry_dsn
+
+# ========================================
+# FILE UPLOADS (Optional)
+# ========================================
+MAX_FILE_SIZE=5242880
+ALLOWED_FILE_TYPES=jpg,jpeg,png,gif,pdf,doc,docx
+
+# ========================================
+# API RATE LIMITING (Optional)
+# ========================================
+RATE_LIMIT_WINDOW_MS=900000
+RATE_LIMIT_MAX_REQUESTS=100

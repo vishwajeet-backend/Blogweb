@@ -227,14 +227,14 @@ export default function PlatformComparisonPage() {
 
   if (loading) {
     return (
-      <div className="p-8 bg-white min-h-screen flex items-center justify-center">
+      <div className="min-h-screen bg-white p-4 sm:p-6 lg:p-8 flex items-center justify-center">
         <Loader2 className="h-8 w-8 animate-spin text-neutral-400" />
       </div>
     )
   }
 
   return (
-    <div className="p-8 bg-white min-h-screen">
+    <div className="min-h-screen bg-white p-4 sm:p-6 lg:p-8">
       {/* Header */}
       <div className="mb-8">
         <Button
@@ -246,7 +246,7 @@ export default function PlatformComparisonPage() {
           Back to Analytics
         </Button>
 
-        <div className="flex items-center justify-between">
+        <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
           <div>
             <div className="flex items-center gap-3 mb-2">
               <h1 className="text-[26px] font-bold text-neutral-900 tracking-tight">
@@ -264,7 +264,7 @@ export default function PlatformComparisonPage() {
           <Button
             onClick={syncAnalytics}
             disabled={syncing}
-            className="bg-emerald-600 hover:bg-emerald-700 h-9 text-[13px]"
+            className="h-9 w-full bg-emerald-600 text-[13px] hover:bg-emerald-700 sm:w-auto"
           >
             {syncing ? (
               <>
@@ -283,7 +283,7 @@ export default function PlatformComparisonPage() {
 
       {/* Platform Selection */}
       <Card className="border border-neutral-200 shadow-sm mb-8">
-        <CardContent className="p-6">
+        <CardContent className="p-4 sm:p-6">
           <h3 className="text-[14px] font-semibold text-neutral-900 mb-4">
             Select Platforms to Compare
           </h3>
@@ -354,11 +354,11 @@ export default function PlatformComparisonPage() {
           <div className="grid gap-5 md:grid-cols-2 mb-8">
             {/* Bar Chart Comparison */}
             <Card className="border border-neutral-200 shadow-sm">
-              <CardContent className="p-6">
+              <CardContent className="p-4 sm:p-6">
                 <h3 className="text-[14px] font-semibold text-neutral-900 mb-4">
                   Metrics Comparison
                 </h3>
-                <ResponsiveContainer width="100%" height={400}>
+                <ResponsiveContainer width="100%" height={320}>
                   <BarChart data={comparisonData} margin={{ top: 20, right: 30, left: 20, bottom: 5 }}>
                     <CartesianGrid strokeDasharray="3 3" stroke="#f0f0f0" />
                     <XAxis dataKey="metric" tick={{ fontSize: 12 }} stroke="#9ca3af" />
@@ -387,11 +387,11 @@ export default function PlatformComparisonPage() {
 
             {/* Radar Chart */}
             <Card className="border border-neutral-200 shadow-sm">
-              <CardContent className="p-6">
+              <CardContent className="p-4 sm:p-6">
                 <h3 className="text-[14px] font-semibold text-neutral-900 mb-4">
                   Performance Overview (Normalized)
                 </h3>
-                <ResponsiveContainer width="100%" height={400}>
+                <ResponsiveContainer width="100%" height={320}>
                   <RadarChart data={radarData}>
                     <PolarGrid stroke="#e5e7eb" />
                     <PolarAngleAxis dataKey="metric" tick={{ fontSize: 12 }} />
@@ -423,7 +423,7 @@ export default function PlatformComparisonPage() {
 
           {/* Engagement Rate Comparison */}
           <Card className="border border-neutral-200 shadow-sm mb-8">
-            <CardContent className="p-6">
+            <CardContent className="p-4 sm:p-6">
               <h3 className="text-[14px] font-semibold text-neutral-900 mb-4">
                 Engagement Rate & Average Views
               </h3>
@@ -451,12 +451,12 @@ export default function PlatformComparisonPage() {
 
           {/* Detailed Comparison Table */}
           <Card className="border border-neutral-200 shadow-sm">
-            <CardContent className="p-6">
+            <CardContent className="p-4 sm:p-6">
               <h3 className="text-[14px] font-semibold text-neutral-900 mb-4">
                 Detailed Metrics
               </h3>
               <div className="overflow-x-auto">
-                <table className="w-full">
+                <table className="w-full min-w-[720px]">
                   <thead>
                     <tr className="border-b border-neutral-200">
                       <th className="text-left text-[12px] font-semibold text-neutral-700 pb-3">Platform</th>

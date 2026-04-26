@@ -1,304 +1,260 @@
-# Blogweb Monorepo
+# PublishType (Blogweb) Monorepo
 
-This repository is now split into separate frontend and backend folders.
+AI-assisted blogging and multi-platform publishing SaaS with:
+- `frontend/`: Next.js 16 app (UI + App Router APIs + Prisma integration)
+- `backend/`: Express service (dedicated REST APIs)
 
-## Structure
+This README is the single source of truth for setup, architecture, workflow, and system design.
 
-- `frontend/` - Next.js application (UI + existing Next API routes)
-- `backend/` - Express.js server (dedicated backend service)
+## Stack
 
-## Run
+### Frontend
+- Next.js 16, React 19, TypeScript
+- Tailwind CSS, Lucide icons
+- Prisma + PostgreSQL
+- NextAuth (beta), JWT, Zod
+- TipTap editor, Recharts, Socket.io client, Sonner
 
-- Frontend: `npm run dev:frontend`
-- Backend: `npm run dev:backend`
+### Backend
+- Express 4, Node.js
+- Prisma + PostgreSQL
+- JWT, bcrypt, Zod
+- Razorpay support
 
-From the repository root:
+## Monorepo Structure
 
-- `npm run dev` starts frontend
-
-Use two terminals if you want both running at once.
-# 🚀 Publish Type - AI-Powered Blog Platform
-
-> A comprehensive AI-powered blog generation and multi-platform publishing SaaS platform built with Next.js 16.
-
-![Next.js](https://img.shields.io/badge/Next.js-16.1.1-black)
-![React](https://img.shields.io/badge/React-19-blue)
-![TypeScript](https://img.shields.io/badge/TypeScript-5-blue)
-![Tailwind CSS](https://img.shields.io/badge/Tailwind-4-38bdf8)
-![License](https://img.shields.io/badge/License-Proprietary-red)
-
-## ✨ What's Included
-
-This project includes **all frontend pages** with a beautiful, minimalistic design:
-
-### 📄 Public Pages
-- ✅ **Landing Page** - Stunning hero, features, and CTA sections
-- ✅ **Pricing Page** - 3-tier pricing with feature comparison
-- ✅ **Features Page** - 12 detailed feature cards
-- ✅ **Login Page** - Authentication with social login
-- ✅ **Signup Page** - User registration
-- ✅ **Password Reset** - Forgot password flow
-
-### 🎛️ Dashboard Pages
-- ✅ **Main Dashboard** - Overview with stats and recent articles
-- ✅ **Articles Management** - Full article listing with search/filters
-- ✅ **Article Editor** - Rich text editor with AI generation UI
-- ✅ **Analytics** - Performance metrics and insights
-- ✅ **Platforms** - Multi-platform connection management
-- ✅ **Team** - Collaboration and role management
-- ✅ **Settings** - Account, security, and billing
-- ✅ **Monetization** - Revenue tracking and payouts
-
-### 🎨 UI Components
-- ✅ Button (6 variants, 4 sizes)
-- ✅ Input (multiple types)
-- ✅ Card (with Header, Content, Footer)
-- ✅ Badge (6 color variants)
-- ✅ Label
-- ✅ Header & Footer
-- ✅ Dashboard Sidebar & Header
-
-## 🎯 Quick Start
-
-### For First Time Setup
-
-```bash
-# 1. Install dependencies
-npm install
-
-# 2. Configure Supabase database (see QUICK_START.md)
-# Add your DATABASE_URL to .env.local
-
-# 3. Run database migration
-npx prisma migrate dev --name init
-
-# 4. Start development server
-npm run dev
-
-# 5. Open browser
-# Navigate to http://localhost:3000
+```text
+Blogweb/
+├─ frontend/
+│  ├─ app/                    # Next App Router pages + route handlers
+│  │  ├─ dashboard/           # User dashboard + embedded admin views
+│  │  ├─ admin/               # Full admin module pages
+│  │  └─ api/                 # Next route handlers (auth, admin, analytics, etc.)
+│  ├─ components/             # UI, layout, editor, modals
+│  ├─ lib/                    # services, context, hooks, middleware helpers
+│  ├─ prisma/                 # Prisma schema and migrations
+│  └─ package.json
+├─ backend/
+│  ├─ src/
+│  │  ├─ controllers/
+│  │  ├─ routes/
+│  │  ├─ services/
+│  │  ├─ middleware/
+│  │  ├─ db/
+│  │  └─ utils/
+│  └─ package.json
+├─ package.json               # root scripts to orchestrate apps
+└─ README.md
 ```
 
-**📖 New to this project?** Follow the [QUICK_START.md](QUICK_START.md) guide (5 minutes setup!)
+## High-Level Architecture
 
-### Already Setup?
+```mermaid
+flowchart LR
+    U[User Browser] --> F[Next.js Frontend]
+    F --> NA[Next API Routes]
+    F --> B[Express Backend]
+    NA --> DB[(PostgreSQL via Prisma)]
+    B --> DB
+    NA --> EXT[External Services]
+    B --> EXT
 
-```bash
-npm run dev
+    EXT --> G[Google/GitHub OAuth]
+    EXT --> P[Razorpay]
+    EXT --> M[Email Providers]
+    EXT --> PUB[Publishing Platforms]
 ```
 
-That's it! The development server is now running with full authentication.
+## Runtime Design (Frontend)
 
-## 🗺️ Page Routes
+```mermaid
+flowchart TD
+    A[App Router Pages] --> B[Auth Context + Guards]
+    A --> C[Dashboard Layout]
+    C --> D[Sidebar + Header]
+    A --> E[API Route Handlers]
+    E --> F[Prisma + DB]
+    E --> G[Platform/AI/Payment Integrations]
+```
+
+## Authentication Flow
+
+```mermaid
+sequenceDiagram
+    participant U as User
+    participant UI as Next.js UI
+    participant API as Auth Route
+    participant DB as Prisma/Postgres
+
+    U->>UI: Submit login/signup
+    UI->>API: POST /api/auth/*
+    API->>DB: Validate user + credentials
+    DB-->>API: User data
+    API-->>UI: accessToken/refreshToken + profile
+    UI->>UI: Store access token (localStorage)
+    UI->>UI: Redirect to /dashboard
+```
+
+## Content & Publishing Workflow
+
+```mermaid
+flowchart LR
+    Draft[Create/Update Article] --> Analyze[AI / SEO / Validation]
+    Analyze --> Queue[Publishing Queue]
+    Queue --> Multi[Platform Connectors]
+    Multi --> Devto[Dev.to]
+    Multi --> Ghost[Ghost]
+    Multi --> Hashnode[Hashnode]
+    Multi --> Wordpress[WordPress]
+    Multi --> Wix[Wix]
+    Multi --> Native[PublishType Blog]
+    Multi --> Metrics[Analytics Sync]
+```
+
+## Admin vs User Experience
+
+- **User** lands on `/dashboard`
+- **Admin** also lands on `/dashboard` (can act as regular user)
+- Admin section is available in dashboard sidebar:
+  - `User Management`
+  - `All Articles`
+  - `Moderation`
+  - `Profile Settings`
+- Admin pages render in embedded mode inside dashboard where required.
+
+## Routes (Important)
 
 ### Public
-- `/` - Landing page
-- `/features` - Features showcase
-- `/pricing` - Pricing plans
-- `/login` - Sign in
-- `/signup` - Create account
-- `/forgot-password` - Reset password
+- `/`
+- `/login`, `/signup`
+- `/forgot-password`, `/reset-password`, `/verify-email`
+- `/pricing`, `/features`, `/blog`, `/about`, `/contact`, `/help`, etc.
 
-### Dashboard (Authenticated)
-- `/dashboard` - Main dashboard
-- `/dashboard/articles` - Articles list
-- `/dashboard/articles/new` - Create article
-- `/dashboard/analytics` - Analytics
-- `/dashboard/platforms` - Platform management
-- `/dashboard/team` - Team collaboration
-- `/dashboard/settings` - Settings
-- `/dashboard/monetization` - Monetization
+### Dashboard
+- `/dashboard`
+- `/dashboard/articles`, `/dashboard/blogs`, `/dashboard/analytics`
+- `/dashboard/integrations`, `/dashboard/team`, `/dashboard/settings`
+- `/dashboard/admin/*` (embedded admin views)
 
-## 🛠️ Tech Stack
+### Admin Module
+- `/admin/users`
+- `/admin/articles`
+- `/admin/moderation`
+- `/admin/settings`
 
-- **Framework**: Next.js 16.1.1 (App Router)
-- **UI Library**: React 19
-- **Language**: TypeScript 5
-- **Styling**: Tailwind CSS 4
-- **Icons**: Lucide React
-- **Components**: Custom UI library with CVA
+## API Surface (Backend Express)
 
-## 📁 Project Structure
+Key route groups in `backend/src/routes/`:
+- `auth.routes.js`
+- `user.routes.js` / `users.routes.js`
+- `articles.routes.js`
+- `blogs.routes.js`
+- `analytics.routes.js`
+- `platforms.routes.js`
+- `publishing.routes.js`
+- `payments.routes.js`
 
-```
-blogweb/
-├── app/                      # Next.js app directory
-│   ├── page.tsx             # Landing page
-│   ├── pricing/             # Pricing page
-│   ├── features/            # Features page
-│   ├── login/               # Login page
-│   ├── signup/              # Signup page
-│   ├── forgot-password/     # Password reset
-│   └── dashboard/           # Dashboard section
-│       ├── page.tsx         # Dashboard home
-│       ├── articles/        # Articles management
-│       ├── analytics/       # Analytics
-│       ├── platforms/       # Platforms
-│       ├── team/            # Team
-│       ├── settings/        # Settings
-│       └── monetization/    # Monetization
-├── components/
-│   ├── ui/                  # Reusable UI components
-│   └── layout/              # Layout components
-├── lib/
-│   └── utils.ts             # Utility functions
-└── public/                  # Static assets
-```
+## Local Development
 
-## 🎨 Design Features
+### Prerequisites
+- Node.js 20+
+- npm 10+
+- PostgreSQL (or managed DB with valid Prisma connection string)
 
-### Minimalistic & Modern
-- Clean, uncluttered interfaces
-- Consistent spacing and typography
-- Subtle animations and transitions
-- Professional neutral color scheme
-- Fully responsive design
-
-### Responsive Design
-- 📱 Mobile-first approach
-- 📊 Adaptive layouts for all screen sizes
-- 🎯 Touch-friendly interactions
-- 🔄 Flexible grid systems
-
-## 📚 Documentation
-
-### Getting Started 🚀
-- [**QUICK_START.md**](./QUICK_START.md) - ⚡ 5-minute setup guide
-- [**SETUP.md**](./SETUP.md) - Complete setup instructions
-- [**AUTH_IMPLEMENTATION.md**](./AUTH_IMPLEMENTATION.md) - Authentication system details
-
-### API & Testing 🧪
-- [**API_TESTING.md**](./API_TESTING.md) - API endpoint testing guide
-- [**ROUTES.md**](./ROUTES.md) - Complete route reference
-
-### Project Documentation 📖
-- [**PROJECT_OVERVIEW.md**](./PROJECT_OVERVIEW.md) - Comprehensive project documentation
-- [**NEXT_STEPS.md**](./NEXT_STEPS.md) - Implementation guide for backend
-- [**HLD.md**](./HLD.md) - High-level design document
-
-## 🚀 What's Working Now?
-
-### ✅ Fully Implemented
-1. **Authentication System** ✅
-   - User signup & login
-   - JWT tokens (access + refresh)
-   - Password hashing with bcrypt
-   - Email verification flow
-   - Password reset functionality
-   - Protected route middleware
-
-2. **Database** ✅
-   - Complete Prisma schema (17 models)
-   - Supabase PostgreSQL integration
-   - Migrations configured
-
-3. **API Endpoints** ✅
-   - 8 authentication endpoints
-   - Standardized JSON responses
-   - Error handling
-   - Validation with Zod
-
-### 🚧 Ready to Implement
-1. **AI Integration** (OpenAI API)
-2. **Platform APIs** (WordPress, Medium, etc.)
-3. **Rich Text Editor** (TipTap configured)
-4. **Analytics** (Google Analytics)
-5. **State Management** (React Query installed)
-
-See [NEXT_STEPS.md](./NEXT_STEPS.md) for detailed implementation guides.
-
-## 🎯 Features Roadmap
-
-### Phase 1: UI/UX ✅ (Completed)
-- [x] All public pages
-- [x] All dashboard pages
-- [x] Responsive design
-- [x] Component library
-- [x] Navigation system
-
-### Phase 2: Backend ✅ (Authentication Complete!)
-- [x] Database schema
-- [x] Authentication system
-- [x] Auth API routes
-- [x] Protected route middleware
-- [ ] Rich text editor integration
-- [ ] AI content generation
-- [ ] Blog & article management APIs
-
-### Phase 3: Advanced Features
-- [ ] Multi-platform publishing
-- [ ] Real-time analytics
-- [ ] Team collaboration
-- [ ] Monetization features
-- [ ] Email notifications
-
-### Phase 4: Production
-- [ ] Testing suite
-- [ ] Performance optimization
-- [ ] Security hardening
-- [ ] Deployment
-- [ ] Documentation
-
-## 📦 Scripts
+### Install
 
 ```bash
-npm run dev          # Start development server
-npm run build        # Build for production
-npm run start        # Start production server
-npm run lint         # Run ESLint
+npm install
+npm install --prefix frontend
+npm install --prefix backend
 ```
 
-## 🎨 Color Palette
+### Environment
 
-- **Primary**: Neutral (900, 800, 700)
-- **Success**: Green (600)
-- **Warning**: Yellow (600)
-- **Error**: Red (600)
-- **Background**: White with subtle gradients
+Create and populate:
+- `frontend/.env`
+- `backend/.env`
 
-## 🤝 Contributing
+At minimum, configure:
+- DB connection (`DATABASE_URL`)
+- Auth secrets/JWT
+- OAuth credentials (Google/GitHub) if using social login
+- Payment and email provider keys if enabled
 
-This is a proprietary project. All rights reserved.
+### Run
 
-## 📄 License
+### Terminal 1 (Frontend)
+```bash
+npm run dev:frontend
+```
 
-Proprietary - All rights reserved
+### Terminal 2 (Backend)
+```bash
+npm run dev:backend
+```
 
-## 🙏 Acknowledgments
+Frontend default: `http://localhost:3000`
 
-Built with:
-- [Next.js](https://nextjs.org/)
-- [Tailwind CSS](https://tailwindcss.com/)
-- [Lucide Icons](https://lucide.dev/)
-- [TypeScript](https://www.typescriptlang.org/)
+### Database
 
----
+Frontend Prisma scripts:
+```bash
+npm run postinstall --prefix frontend   # prisma generate
+npm run build --prefix frontend         # prisma generate + next build
+```
 
-## 🎉 Status: Authentication Complete!
+Backend Prisma scripts:
+```bash
+npm run prisma:generate --prefix backend
+npm run prisma:migrate --prefix backend
+npm run prisma:push --prefix backend
+```
 
-All UI pages and authentication system are ready at **http://localhost:3000**
+## Available Scripts
 
-**Files Created**: 40+ TypeScript/React components
-**Lines of Code**: ~5,000+ lines
-**Pages**: 15 complete pages
-**Components**: 10+ reusable UI components
-**API Endpoints**: 8 authentication routes
-**Database Models**: 17 Prisma models
+### Root
+```bash
+npm run dev
+npm run dev:frontend
+npm run dev:backend
+npm run build
+npm run start
+```
 
-### ✅ You Can Now:
-- Create user accounts
-- Login/logout users
-- Reset passwords
-- Protect routes with authentication
-- Access user data via JWT tokens
+### Frontend
+```bash
+npm run dev --prefix frontend
+npm run build --prefix frontend
+npm run start --prefix frontend
+npm run lint --prefix frontend
+npm run seed:admin --prefix frontend
+```
 
-### 🚀 Next: Build Features
-Follow the [NEXT_STEPS.md](./NEXT_STEPS.md) guide to add:
-- Blog management
-- AI content generation
-- Platform publishing
-- Analytics dashboard
+### Backend
+```bash
+npm run dev --prefix backend
+npm run start --prefix backend
+npm run prisma:generate --prefix backend
+npm run prisma:migrate --prefix backend
+npm run prisma:push --prefix backend
+```
 
----
+## Product Workflow (Recommended)
 
+1. User/Admin signs in on web app.
+2. Create and edit content in dashboard.
+3. Run AI/SEO checks (where enabled).
+4. Publish to internal blog and/or external platforms.
+5. Track engagement in analytics pages.
+6. Admin moderates content and users.
 
+## Notes for Contributors
+
+- Keep auth and routing behavior consistent across dashboard/admin.
+- Prefer reusable components in `frontend/components`.
+- Keep DB schema changes coordinated with Prisma migration flow.
+- If adding routes, update this README section for key paths.
+
+## License
+
+Proprietary. All rights reserved.

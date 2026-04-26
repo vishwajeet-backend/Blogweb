@@ -1,6 +1,6 @@
 "use client"
 
-import { ChevronDown, LogOut, Menu, Moon, Search, Sun } from "lucide-react"
+import { LogOut, Menu, Moon, Search, Sun } from "lucide-react"
 import { useAuth } from "@/lib/context/AuthContext"
 import { useTheme } from "@/lib/context/ThemeContext"
 import { NotificationBell } from "@/components/NotificationBell"
@@ -33,17 +33,17 @@ export function DashboardHeader({ onMenuClick }: { onMenuClick?: () => void }) {
           <Menu className="h-5 w-5" />
         </button>
 
-        <div className="flex w-[170px] items-center gap-2.5 rounded-[28px] border border-[#E45C03] px-2.5 py-2 shadow-[0_2px_2px_0_#FECFB1] sm:w-[280px] lg:w-[374px] dark:border-[#FC8435] dark:bg-[#1E1E1E] dark:shadow-none">
+        <div className="flex w-[140px] items-center gap-2.5 rounded-[28px] border border-[#E45C03] px-2.5 py-2 shadow-[0_2px_2px_0_#FECFB1] sm:w-[280px] lg:w-[374px] dark:border-[#FC8435] dark:bg-[#1E1E1E] dark:shadow-none">
         <Search className="h-[18px] w-[18px] text-[#999999]" />
         <input
           type="text"
-          placeholder="Search Documentation"
+          placeholder="Search"
           className="w-full bg-transparent text-sm font-medium text-[#212121] placeholder:text-[#999999] outline-none dark:text-[#F7F7F7] sm:text-base"
         />
       </div>
       </div>
 
-      <div className="flex items-center gap-3 sm:gap-6 lg:gap-10">
+      <div className="flex items-center gap-3 sm:gap-5 lg:gap-7">
         <div className="flex items-center gap-3 text-[#212121] sm:gap-5 dark:text-[#E5E5E5]">
           <button type="button" onClick={toggleTheme} className="rounded-full p-1" aria-label="Toggle dark mode">
             {isDark ? <Sun className="h-5 w-5" /> : <Moon className="h-5 w-5" />}
@@ -51,10 +51,10 @@ export function DashboardHeader({ onMenuClick }: { onMenuClick?: () => void }) {
           <NotificationBell />
         </div>
 
-        <div className="flex items-center gap-2 sm:gap-3">
-          <div className="hidden w-[100px] text-right leading-tight sm:block">
-            <p className="text-base font-medium text-black dark:text-white">{user?.name || "Isabella V."}</p>
-            <p className="text-[13px] font-medium text-[#6A6A6A] dark:text-[#B3B3B3]">Editor in Chief</p>
+        <div className="flex items-center gap-2 sm:gap-2.5">
+          <div className="hidden max-w-[140px] text-right leading-tight sm:block">
+            <p className="truncate text-[14px] font-semibold text-black dark:text-white">{user?.name || "Isabella V."}</p>
+            <p className="truncate text-[11px] font-medium text-[#6A6A6A] dark:text-[#B3B3B3]">Editor in Chief</p>
           </div>
 
           {user?.avatar ? (
@@ -64,8 +64,6 @@ export function DashboardHeader({ onMenuClick }: { onMenuClick?: () => void }) {
               {user ? initials(user.name) : "IV"}
             </div>
           )}
-
-          <ChevronDown className="hidden h-[18px] w-[18px] text-[#6A6A6A] sm:block dark:text-[#B3B3B3]" />
 
           <button
             onClick={logout}

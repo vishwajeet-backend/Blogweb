@@ -73,6 +73,8 @@ export default function AdminModerationPage() {
   const router = useRouter();
   const searchParams = useSearchParams();
   const selectedArticleId = searchParams.get('id');
+  const embedded = searchParams.get('embedded') === '1';
+  const toEmbedded = (path: string) => (embedded ? `${path}${path.includes('?') ? '&' : '?'}embedded=1` : path);
 
   const [cases, setCases] = useState<ModerationListItem[]>([]);
   const [detail, setDetail] = useState<ModerationDetail | null>(null);
@@ -107,7 +109,7 @@ export default function AdminModerationPage() {
       setCases(nextCases);
 
       if (!selectedArticleId && nextCases.length > 0) {
-        router.replace(`/admin/moderation?id=${nextCases[0].id}`);
+        router.replace(toEmbedded(`/admin/moderation?id=${nextCases[0].id}`));
       }
     } catch (err: any) {
       setError(err?.message || 'Failed to fetch moderation cases');
@@ -187,9 +189,9 @@ export default function AdminModerationPage() {
   return (
     <div className="min-h-screen bg-[#FFFEFD] px-4 py-6 md:px-6 lg:px-8" style={{ fontFamily: 'Satoshi, var(--font-geist-sans), sans-serif' }}>
       <div className="mx-auto max-w-[1220px]">
-        <div className="flex items-center justify-between border-b border-[#E7E5E4] pb-3">
+        {!embedded && <div className="flex flex-wrap items-center justify-between gap-2 border-b border-[#E7E5E4] pb-3">
           <p className="text-[22px] font-bold text-[#1C1917]">Admin Panel</p>
-        </div>
+        </div>}
 
         <div className="flex flex-wrap items-start justify-between gap-3">
           <div>
@@ -198,13 +200,13 @@ export default function AdminModerationPage() {
             </p>
             <h1 className="text-[22px] font-bold text-[#292524] sm:text-[25px]">Content Moderation Details</h1>
             <p className="text-[13px] text-[#79716B]">Reviewing flagged content.</p>
-            <AdminNavTabs />
+            {!embedded && <AdminNavTabs />}
           </div>
 
-          <div className="flex items-center gap-2">
+          <div className="flex flex-wrap items-center gap-2">
             {detail ? <span className="rounded px-2 py-1 text-[10px] font-bold text-[#57534D]">Case #{detail.caseNumber}</span> : null}
             <button
-              onClick={() => router.push('/admin/articles')}
+              onClick={() => router.push(toEmbedded('/admin/articles'))}
               className="rounded-full border border-[#FB6503] bg-[#FFFEFD] px-5 py-2 text-[10px] font-bold text-[#57534D] shadow-sm"
             >
               Back to List
@@ -339,7 +341,7 @@ export default function AdminModerationPage() {
                     return (
                       <button
                         key={item.id}
-                        onClick={() => router.push(`/admin/moderation?id=${item.id}`)}
+                        onClick={() => router.push(toEmbedded(`/admin/moderation?id=${item.id}`))}
                         className={`w-full rounded border px-3 py-2 text-left ${
                           active
                             ? 'border-[#FB6503] bg-[#FFF7F2]'
@@ -363,9 +365,9 @@ export default function AdminModerationPage() {
 
 function DetailRow({ label, value }: { label: string; value: string }) {
   return (
-    <div className="flex items-center justify-between border-b border-[#F5F5F4] px-3 py-3 last:border-b-0">
+    <div className="flex flex-col gap-1 border-b border-[#F5F5F4] px-3 py-3 last:border-b-0 sm:flex-row sm:items-center sm:justify-between">
       <span className="text-[10px] font-bold text-[#A6A09B]">{label}</span>
-      <span className="text-[13px] text-[#292524]">{value}</span>
+      <span className="break-words text-[13px] text-[#292524] sm:text-right">{value}</span>
     </div>
   );
 }

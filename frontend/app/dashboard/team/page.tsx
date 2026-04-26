@@ -3,21 +3,13 @@
 import { useEffect, useState } from 'react'
 import {
   Users,
-  UserPlus,
   Mail,
   CheckCircle,
   Clock,
-  XCircle,
-  Eye,
-  Edit3,
-  MessageSquare,
-  Trash2,
-  Send,
   Loader2,
   ChevronRight,
   ShieldCheck
 } from 'lucide-react'
-import { useRouter } from 'next/navigation'
 import Link from 'next/link'
 
 interface User {
@@ -44,7 +36,6 @@ interface Invitation {
 }
 
 export default function TeamPage() {
-  const router = useRouter()
   const [invitations, setInvitations] = useState<Invitation[]>([])
   const [loading, setLoading] = useState(true)
   const [filter, setFilter] = useState<'all' | 'pending' | 'accepted'>('all')
@@ -90,135 +81,165 @@ export default function TeamPage() {
     return true
   })
 
-  if (loading) return <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', minHeight: '60vh' }}><Loader2 className="animate-spin" size={40} color="#FF7A33" /></div>
+  if (loading) {
+    return (
+      <div className="flex min-h-[60vh] items-center justify-center">
+        <Loader2 className="h-10 w-10 animate-spin text-[#FF7A33]" />
+      </div>
+    )
+  }
 
   return (
-    <div style={{ paddingBottom: '100px' }}>
-      {/* Hero Header */}
-      <section style={{
-        backgroundImage: 'linear-gradient(rgba(255, 255, 255, 0.4), rgba(255, 255, 255, 0.4)), url("/design/BG%2023-01%202.png")',
-        backgroundSize: 'cover',
-        backgroundPosition: 'center',
-        padding: '60px 40px',
-      }}>
-        <h1 style={{ fontSize: '42px', fontWeight: 800, color: '#1a1a1a', margin: '0 0 10px 0' }}>
-          Team <span style={{ fontStyle: 'italic', fontWeight: 300, color: '#666', fontFamily: 'serif' }}>Collaboration</span>
-        </h1>
-        <p style={{ color: '#666', fontSize: '15px', fontWeight: 500 }}>Manage access and collaborate on shared articles.</p>
+    <div className="pb-12 sm:pb-16">
+      <section
+        className="bg-cover bg-center px-4 py-8 sm:px-6 sm:py-10 lg:px-10"
+        style={{
+          backgroundImage:
+            'linear-gradient(rgba(255, 255, 255, 0.40), rgba(255, 255, 255, 0.40)), url("/design/BG%2023-01%202.png")',
+        }}
+      >
+        <div className="mx-auto max-w-[1100px]">
+          <h1 className="text-[30px] font-extrabold leading-tight text-[#1a1a1a] sm:text-[36px] lg:text-[42px]">
+            Team{" "}
+            <span className="font-serif text-[#666] italic font-light">
+              Collaboration
+            </span>
+          </h1>
+          <p className="mt-2 text-sm font-medium text-[#666] sm:text-[15px]">
+            Manage access and collaborate on shared articles.
+          </p>
+        </div>
       </section>
 
-      <section style={{ padding: '40px' }}>
-
-        {/* Stats Row */}
-        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: '32px', marginBottom: '48px' }}>
+      <section className="mx-auto max-w-[1100px] px-4 pt-5 sm:px-6 sm:pt-8 lg:px-10">
+        <div className="mb-6 grid grid-cols-1 gap-3 sm:mb-8 sm:grid-cols-2 lg:grid-cols-3 lg:gap-5">
           {[
-            { label: 'Total Invitations', val: invitations.length, icon: <Mail color="#FF7A33" /> },
-            { label: 'Pending Access', val: invitations.filter(i => i.status === 'PENDING').length, icon: <Clock color="#faad14" /> },
-            { label: 'Joined Articles', val: invitations.filter(i => i.status === 'ACCEPTED').length, icon: <CheckCircle color="#22c55e" /> },
-          ].map(s => (
-            <div key={s.label} style={{ backgroundColor: '#fff', borderRadius: '32px', border: '1px solid #eee', padding: '32px', boxShadow: '0 10px 40px rgba(0,0,0,0.02)' }}>
-              <div style={{ width: '40px', height: '40px', borderRadius: '12px', backgroundColor: '#fcfcfc', border: '1px solid #eee', display: 'flex', alignItems: 'center', justifyContent: 'center', marginBottom: '16px' }}>
+            { label: 'Total Invitations', val: invitations.length, icon: <Mail className="h-5 w-5 text-[#FF7A33]" /> },
+            { label: 'Pending Access', val: invitations.filter(i => i.status === 'PENDING').length, icon: <Clock className="h-5 w-5 text-[#faad14]" /> },
+            { label: 'Joined Articles', val: invitations.filter(i => i.status === 'ACCEPTED').length, icon: <CheckCircle className="h-5 w-5 text-[#22c55e]" /> },
+          ].map((s) => (
+            <div key={s.label} className="rounded-2xl border border-[#eee] bg-white p-4 shadow-[0_6px_24px_rgba(0,0,0,0.03)] sm:p-5">
+              <div className="mb-3 flex h-9 w-9 items-center justify-center rounded-xl border border-[#eee] bg-[#fcfcfc]">
                 {s.icon}
               </div>
-              <p style={{ margin: '0 0 4px 0', fontSize: '28px', fontWeight: 800, color: '#1a1a1a' }}>{s.val}</p>
-              <p style={{ margin: 0, fontSize: '12px', fontWeight: 700, color: '#999', textTransform: 'uppercase' }}>{s.label}</p>
+              <p className="text-[24px] font-extrabold text-[#1a1a1a] sm:text-[28px]">{s.val}</p>
+              <p className="text-[11px] font-bold uppercase tracking-wide text-[#999]">{s.label}</p>
             </div>
           ))}
         </div>
 
-        {/* Filters */}
-        <div style={{ display: 'flex', gap: '12px', marginBottom: '40px' }}>
+        <div className="mb-6 flex flex-wrap gap-2 sm:mb-8 sm:gap-3">
           {['all', 'pending', 'accepted'].map((f) => (
             <button
               key={f}
-              onClick={() => setFilter(f as any)}
-              style={{
-                padding: '10px 24px',
-                borderRadius: '50px',
-                border: filter === f ? 'none' : '1px solid #eee',
-                backgroundColor: filter === f ? '#1a1a1a' : '#fff',
-                color: filter === f ? '#fff' : '#666',
-                fontSize: '13px',
-                fontWeight: 800,
-                cursor: 'pointer',
-                textTransform: 'capitalize'
-              }}
+              onClick={() => setFilter(f as 'all' | 'pending' | 'accepted')}
+              className={`rounded-full px-4 py-2 text-xs font-extrabold capitalize sm:px-5 sm:text-[13px] ${
+                filter === f
+                  ? 'bg-[#1a1a1a] text-white'
+                  : 'border border-[#eee] bg-white text-[#666]'
+              }`}
             >
               {f}
             </button>
           ))}
         </div>
 
-        {/* Invitation List */}
-        <div style={{ display: 'flex', flexDirection: 'column', gap: '24px' }}>
+        <div className="space-y-4 sm:space-y-5">
           {filteredInvitations.map((inv) => (
-            <div key={inv.id} style={{
-              backgroundColor: '#fff',
-              borderRadius: '32px',
-              border: '1px solid #eee',
-              padding: '32px',
-              display: 'flex',
-              justifyContent: 'space-between',
-              alignItems: 'center',
-              boxShadow: '0 10px 40px rgba(0,0,0,0.02)'
-            }}>
-              <div style={{ display: 'flex', gap: '24px', alignItems: 'center' }}>
-                <div style={{ width: '64px', height: '64px', borderRadius: '20px', backgroundColor: '#fcfcfc', border: '1px solid #eee', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '24px', fontWeight: 800, color: '#FF7A33' }}>
+            <div
+              key={inv.id}
+              className="rounded-2xl border border-[#eee] bg-white p-4 shadow-[0_6px_24px_rgba(0,0,0,0.03)] sm:rounded-3xl sm:p-6"
+            >
+              <div className="flex flex-col gap-4 md:flex-row md:items-center md:justify-between">
+                <div className="flex min-w-0 items-start gap-3 sm:gap-4">
+                  <div className="flex h-12 w-12 shrink-0 items-center justify-center rounded-2xl border border-[#eee] bg-[#fcfcfc] text-xl font-extrabold text-[#FF7A33] sm:h-14 sm:w-14">
                   {inv.article.user.name[0]}
-                </div>
-                <div>
-                  <div style={{ display: 'flex', alignItems: 'center', gap: '12px', marginBottom: '8px' }}>
-                    <h3 style={{ margin: 0, fontSize: '18px', fontWeight: 800, color: '#1a1a1a' }}>{inv.article.title}</h3>
-                    <span style={{ backgroundColor: '#f5f5f5', color: '#1a1a1a', padding: '4px 12px', borderRadius: '50px', fontSize: '10px', fontWeight: 800 }}>{inv.role}</span>
-                    {inv.status === 'PENDING' && <span style={{ backgroundColor: '#fff5eb', color: '#FF7A33', padding: '4px 12px', borderRadius: '50px', fontSize: '10px', fontWeight: 800 }}>PENDING</span>}
                   </div>
-                  <p style={{ margin: '0 0 8px 0', fontSize: '14px', color: '#666', fontWeight: 500 }}>Shared by <span style={{ fontWeight: 700, color: '#1a1a1a' }}>{inv.article.user.name}</span></p>
-                  <p style={{ margin: 0, fontSize: '12px', color: '#999', fontWeight: 600 }}>Invited on {new Date(inv.invitedAt).toLocaleDateString()}</p>
+                  <div className="min-w-0">
+                    <div className="mb-1 flex flex-wrap items-center gap-1.5 sm:gap-2">
+                      <h3 className="line-clamp-2 text-base font-extrabold text-[#1a1a1a] sm:text-lg">
+                        {inv.article.title}
+                      </h3>
+                      <span className="rounded-full bg-[#f5f5f5] px-2.5 py-1 text-[10px] font-extrabold text-[#1a1a1a]">
+                        {inv.role}
+                      </span>
+                      {inv.status === 'PENDING' && (
+                        <span className="rounded-full bg-[#fff5eb] px-2.5 py-1 text-[10px] font-extrabold text-[#FF7A33]">
+                          PENDING
+                        </span>
+                      )}
+                    </div>
+                    <p className="text-sm text-[#666]">
+                      Shared by{" "}
+                      <span className="font-bold text-[#1a1a1a]">
+                        {inv.article.user.name}
+                      </span>
+                    </p>
+                    <p className="mt-1 text-xs font-semibold text-[#999]">
+                      Invited on {new Date(inv.invitedAt).toLocaleDateString()}
+                    </p>
+                  </div>
                 </div>
-              </div>
 
-              <div>
-                {inv.status === 'PENDING' ? (
-                  <button
-                    onClick={() => handleAccept(inv.id)}
-                    style={{ padding: '14px 32px', borderRadius: '50px', backgroundColor: '#1a1a1a', color: '#fff', border: 'none', fontWeight: 800, fontSize: '13px', cursor: 'pointer', display: 'flex', alignItems: 'center', gap: '10px' }}>
-                    <CheckCircle size={16} /> ACCEPT ACCESS
-                  </button>
-                ) : (
-                  <Link href={`/dashboard/articles/${inv.article.id}`} style={{ padding: '14px 32px', borderRadius: '50px', border: '1px solid #eee', color: '#1a1a1a', textDecoration: 'none', fontWeight: 800, fontSize: '13px', display: 'flex', alignItems: 'center', gap: '10px' }}>
-                    OPEN ARTICLE <ChevronRight size={16} />
-                  </Link>
-                )}
+                <div className="w-full md:w-auto">
+                  {inv.status === 'PENDING' ? (
+                    <button
+                      onClick={() => handleAccept(inv.id)}
+                      className="flex w-full items-center justify-center gap-2 rounded-full bg-[#1a1a1a] px-5 py-2.5 text-xs font-extrabold text-white md:w-auto md:text-[13px]"
+                    >
+                      <CheckCircle className="h-4 w-4" /> ACCEPT ACCESS
+                    </button>
+                  ) : (
+                    <Link
+                      href={`/dashboard/articles/${inv.article.id}`}
+                      className="flex w-full items-center justify-center gap-2 rounded-full border border-[#eee] px-5 py-2.5 text-xs font-extrabold text-[#1a1a1a] md:w-auto md:text-[13px]"
+                    >
+                      OPEN ARTICLE <ChevronRight className="h-4 w-4" />
+                    </Link>
+                  )}
+                </div>
               </div>
             </div>
           ))}
 
           {filteredInvitations.length === 0 && (
-            <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', padding: '80px 0' }}>
-              <Users size={60} color="#eee" style={{ marginBottom: '24px' }} />
-              <p style={{ fontSize: '16px', fontWeight: 700, color: '#999' }}>No collaboration invitations found.</p>
+            <div className="flex flex-col items-center justify-center rounded-2xl border border-dashed border-[#ececec] bg-white px-4 py-12 text-center sm:py-16">
+              <Users className="mb-5 h-12 w-12 text-[#dedede]" />
+              <p className="text-base font-bold text-[#999]">
+                No collaboration invitations found.
+              </p>
             </div>
           )}
         </div>
 
-        {/* Feature Hub Card */}
-        <div style={{ marginTop: '80px', backgroundColor: '#1a1a1a', borderRadius: '40px', padding: '60px', color: '#fff', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-          <div style={{ maxWidth: '600px' }}>
-            <div style={{ display: 'flex', alignItems: 'center', gap: '12px', marginBottom: '24px' }}>
-              <ShieldCheck size={32} color="#FF7A33" />
-              <h2 style={{ margin: 0, fontSize: '24px', fontWeight: 800 }}>Scale with Premium Management</h2>
+        <div className="mt-8 rounded-3xl bg-[#1a1a1a] p-5 text-white sm:mt-10 sm:p-7 lg:p-10">
+          <div className="flex flex-col gap-6 lg:flex-row lg:items-center lg:justify-between">
+            <div className="max-w-[620px]">
+              <div className="mb-4 flex items-center gap-3">
+                <ShieldCheck className="h-7 w-7 text-[#FF7A33]" />
+                <h2 className="text-[24px] font-extrabold leading-tight sm:text-[28px]">
+                  Scale with Premium Management
+                </h2>
+              </div>
+              <p className="text-sm leading-7 text-white/75 sm:text-base">
+                Invite multiple editors, manage content approval workflows, and
+                see real-time updates from your team members as you scale your
+                publication reach.
+              </p>
+              <div className="mt-5 grid grid-cols-1 gap-2 sm:grid-cols-2 sm:gap-3">
+                <div className="flex items-center gap-2 text-xs font-bold sm:text-[13px]"><CheckCircle className="h-3.5 w-3.5 text-[#FF7A33]" /> Role Based Access Control</div>
+                <div className="flex items-center gap-2 text-xs font-bold sm:text-[13px]"><CheckCircle className="h-3.5 w-3.5 text-[#FF7A33]" /> Real-time Collaborative Editing</div>
+                <div className="flex items-center gap-2 text-xs font-bold sm:text-[13px]"><CheckCircle className="h-3.5 w-3.5 text-[#FF7A33]" /> Content Audit Logs</div>
+                <div className="flex items-center gap-2 text-xs font-bold sm:text-[13px]"><CheckCircle className="h-3.5 w-3.5 text-[#FF7A33]" /> Central Billing Management</div>
+              </div>
             </div>
-            <p style={{ fontSize: '16px', opacity: 0.7, lineHeight: '1.7', marginBottom: '32px' }}>
-              Invite multiple editors, manage content approval workflows, and see real-time updates from your team members as you scale your publication reach.
-            </p>
-            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '20px' }}>
-              <div style={{ display: 'flex', alignItems: 'center', gap: '10px', fontSize: '13px', fontWeight: 700 }}><CheckCircle size={14} color="#FF7A33" /> Role Based Access Control</div>
-              <div style={{ display: 'flex', alignItems: 'center', gap: '10px', fontSize: '13px', fontWeight: 700 }}><CheckCircle size={14} color="#FF7A33" /> Real-time Collaborative Editing</div>
-              <div style={{ display: 'flex', alignItems: 'center', gap: '10px', fontSize: '13px', fontWeight: 700 }}><CheckCircle size={14} color="#FF7A33" /> Content Audit Logs</div>
-              <div style={{ display: 'flex', alignItems: 'center', gap: '10px', fontSize: '13px', fontWeight: 700 }}><CheckCircle size={14} color="#FF7A33" /> Central Billing Management</div>
+
+            <div className="w-full lg:w-auto">
+              <button className="w-full rounded-full bg-[#FF7A33] px-6 py-3 text-xs font-extrabold text-white sm:w-auto sm:px-8 sm:text-[13px]">
+                CONTACT FOR ENTERPRISE
+              </button>
             </div>
           </div>
-          <button style={{ padding: '20px 48px', borderRadius: '50px', backgroundColor: '#FF7A33', color: '#fff', border: 'none', fontWeight: 800, fontSize: '14px', cursor: 'pointer' }}>CONTACT FOR ENTERPRISE</button>
         </div>
       </section>
     </div>

@@ -2,6 +2,7 @@
 
 import { useEffect, useMemo, useState } from 'react';
 import { useRouter, useSearchParams } from 'next/navigation';
+import Link from 'next/link';
 import { Loader2, Moon, Plus, Search, Sun } from 'lucide-react';
 import { useAuth } from '@/lib/context/AuthContext';
 import { useTheme } from '@/lib/context/ThemeContext';
@@ -93,6 +94,8 @@ export default function AdminArticlesPage() {
   const searchParams = useSearchParams();
   const mode = searchParams.get('mode');
   const selectedArticleId = searchParams.get('id');
+  const embedded = searchParams.get('embedded') === '1';
+  const toEmbedded = (path: string) => (embedded ? `${path}${path.includes('?') ? '&' : '?'}embedded=1` : path);
   const isModerationMode = mode === 'moderation';
 
   const [articles, setArticles] = useState<AdminArticle[]>([]);
@@ -201,7 +204,7 @@ export default function AdminArticlesPage() {
 
   const openArticle = (articleId: string) => {
     if (isModerationMode) {
-      router.push(`/admin/moderation?id=${articleId}`);
+      router.push(toEmbedded(`/admin/moderation?id=${articleId}`));
       return;
     }
 
@@ -243,9 +246,11 @@ export default function AdminArticlesPage() {
 
   return (
     <div className="min-h-screen bg-[#FFFEFD]" style={{ fontFamily: 'Satoshi, var(--font-geist-sans), sans-serif' }}>
-      <header className="border-b border-[#E9E9E9] bg-white px-3 py-3 sm:px-4 md:px-6">
+      {!embedded && <header className="border-b border-[#E9E9E9] bg-white px-3 py-3 sm:px-4 md:px-6">
         <div className="mx-auto flex max-w-[1220px] items-center justify-between gap-4">
-          <p className="text-[22px] font-black uppercase tracking-[-0.04em] text-[#FB6503] sm:text-[26px] md:text-[34px]">PublishType</p>
+          <Link href="/" className="text-[22px] font-black uppercase tracking-[-0.04em] text-[#FB6503] sm:text-[26px] md:text-[34px]">
+            PublishType
+          </Link>
           <div className="hidden w-full max-w-[460px] items-center gap-2 rounded-[28px] border border-[#E45C03] px-3 py-2 md:flex">
             <Search className="h-4 w-4 text-[#999999]" />
             <input placeholder="Search Documentation" className="w-full bg-transparent text-[16px] text-[#212121] outline-none" />
@@ -256,7 +261,7 @@ export default function AdminArticlesPage() {
             <AdminUserMenu name={user.name} />
           </div>
         </div>
-      </header>
+      </header>}
 
       <main className="mx-auto max-w-[1220px] px-3 py-5 sm:px-4 md:px-6">
         <div className="flex flex-wrap items-start justify-between gap-4">
@@ -265,7 +270,7 @@ export default function AdminArticlesPage() {
             <p className="mt-1 text-[14px] font-bold text-[#6A6A6A] sm:text-[16px] md:text-[20px]">
               {isModerationMode ? 'Review, warn, archive, restore or remove content.' : 'Manage and moderate content from all publishers.'}
             </p>
-            <AdminNavTabs />
+            {!embedded && <AdminNavTabs />}
           </div>
           <button
             onClick={() => router.push('/dashboard/articles/new')}
@@ -288,15 +293,15 @@ export default function AdminArticlesPage() {
               />
             </div>
 
-            <select value={status} onChange={(e) => setStatus(e.target.value)} className="rounded-[8px] border border-[#E9E9E9] px-3 py-2 text-[14px] text-[#44403B] sm:text-[16px]">
+            <select value={status} onChange={(e) => setStatus(e.target.value)} className="w-full rounded-[8px] border border-[#E9E9E9] px-3 py-2 text-[14px] text-[#44403B] sm:w-auto sm:text-[16px]">
               {statusOptions.map((s) => <option key={s} value={s}>Status: {s}</option>)}
             </select>
 
-            <select value={platform} onChange={(e) => setPlatform(e.target.value)} className="rounded-[8px] border border-[#E9E9E9] px-3 py-2 text-[14px] text-[#44403B] sm:text-[16px]">
+            <select value={platform} onChange={(e) => setPlatform(e.target.value)} className="w-full rounded-[8px] border border-[#E9E9E9] px-3 py-2 text-[14px] text-[#44403B] sm:w-auto sm:text-[16px]">
               {platformOptions.map((p) => <option key={p} value={p}>Platform: {p}</option>)}
             </select>
 
-            <button onClick={() => fetchArticles(1)} className="rounded-[8px] bg-[#FB6503] px-3 py-2 text-[14px] text-white sm:text-[16px]">Apply</button>
+            <button onClick={() => fetchArticles(1)} className="w-full rounded-[8px] bg-[#FB6503] px-3 py-2 text-[14px] text-white sm:w-auto sm:text-[16px]">Apply</button>
           </div>
 
           {error && <div className="px-4 py-2 text-sm text-[#B91C1C]">{error}</div>}
@@ -320,7 +325,7 @@ export default function AdminArticlesPage() {
                 <p className="text-[14px] text-[#44403B] line-clamp-1">{article.publishRecords.map((p) => p.platform).join(', ') || 'None'}</p>
                 <p className="text-[14px] text-[#6A6A6A]">{formatDate(article.createdAt)}</p>
                 <p className="text-[20px] font-medium text-[#44403B] md:text-[24px]">{article.views.toLocaleString('en-IN')}</p>
-                <button onClick={() => router.push(`/admin/users/${article.user.id}`)} className="text-left text-[14px] text-[#1E40AF] underline underline-offset-2">
+                <button onClick={() => router.push(toEmbedded(`/admin/users/${article.user.id}`))} className="text-left text-[14px] text-[#1E40AF] underline underline-offset-2">
                   {article.user.name}
                 </button>
                 <div className="flex flex-wrap items-center gap-1">
@@ -383,7 +388,7 @@ export default function AdminArticlesPage() {
                   <div className="mt-2 flex flex-wrap items-center gap-2">
                     <span className={`w-fit rounded-full px-2 py-0.5 text-[11px] ${statusStyles(article.status)}`}>{article.status}</span>
                     <span className="text-[12px] text-[#6A6A6A]">{article.views.toLocaleString('en-IN')} views</span>
-                    <button onClick={() => router.push(`/admin/users/${article.user.id}`)} className="text-[12px] text-[#1E40AF] underline underline-offset-2">
+                    <button onClick={() => router.push(toEmbedded(`/admin/users/${article.user.id}`))} className="text-[12px] text-[#1E40AF] underline underline-offset-2">
                       {article.user.name}
                     </button>
                   </div>
@@ -465,7 +470,7 @@ export default function AdminArticlesPage() {
                 <p className="text-[13px] text-[#79716B]">Reviewing flagged content.</p>
               </div>
               <button
-                onClick={() => router.push('/admin/articles?mode=moderation')}
+                onClick={() => router.push(toEmbedded('/admin/articles?mode=moderation'))}
                 className="rounded-full border border-[#FB6503] px-4 py-2 text-[13px] font-bold text-[#57534D]"
               >
                 Back to List

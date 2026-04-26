@@ -92,168 +92,104 @@ export default function SignupPage() {
     }
   }
 
-  const inputStyle = (hasError: boolean) => ({
-    width: '100%',
-    padding: '14px 24px',
-    borderRadius: '50px',
-    border: `1px solid ${hasError ? '#FF4B2B' : '#eee'}`,
-    backgroundColor: '#f9f9f9',
-    fontSize: '14px',
-    outline: 'none',
-    transition: 'all 0.2s'
-  })
-
-  const labelStyle = {
-    fontSize: '12px',
-    fontWeight: 800,
-    color: '#1a1a1a',
-    marginBottom: '6px',
-    display: 'block',
-    textTransform: 'uppercase' as const,
-    letterSpacing: '0.05em'
-  }
-
-  const errorTextStyle = {
-    fontSize: '11px',
-    color: '#FF4B2B',
-    marginTop: '4px',
-    fontWeight: 700,
-    marginLeft: '12px'
-  }
-
   return (
-    <div style={{
-      backgroundImage: 'linear-gradient(rgba(255, 255, 255, 0.4), rgba(255, 255, 255, 0.4)), url("/design/BG%2023-01%202.png")',
-      backgroundSize: 'cover',
-      backgroundPosition: 'center',
-      minHeight: '100vh',
-      display: 'flex',
-      flexDirection: 'column'
-    }}>
-
-      {/* Mini Header */}
-      <header style={{ padding: '24px 40px', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-        <Link href="/" style={{ display: 'flex', alignItems: 'center', gap: '8px', textDecoration: 'none' }}>
-          <div style={{ width: '32px', height: '32px', backgroundColor: '#FF7A33', borderRadius: '8px' }}></div>
-          <span style={{ fontSize: '20px', fontWeight: 800, color: '#1a1a1a' }}>PublishType</span>
-        </Link>
-        <p style={{ margin: 0, fontSize: '14px', color: '#666' }}>
-          Already have an account? <Link href="/login" style={{ color: '#FF7A33', fontWeight: 700, textDecoration: 'none' }}>Login</Link>
-        </p>
+    <div className="min-h-screen bg-[linear-gradient(rgba(255,255,255,0.75),rgba(255,255,255,0.75)),url('/design/BG%2023-01%202.png')] bg-cover bg-center text-[#212121]">
+      <header className="border-b border-[#e9e9e9] px-4 py-4 sm:px-6 md:px-10">
+        <div className="mx-auto flex max-w-[1360px] items-center justify-between gap-2">
+          <Link href="/" className="flex items-center gap-2 no-underline">
+            <div className="h-7 w-7 rounded-md bg-[#FF7A33]" />
+            <span className="text-xl font-extrabold text-[#1a1a1a] sm:text-2xl">PublishType</span>
+          </Link>
+          <p className="text-[12px] text-[#666] sm:text-sm">
+            Already have an account? <Link href="/login" className="font-bold text-[#FF7A33] no-underline">Login</Link>
+          </p>
+        </div>
       </header>
 
-      {/* Main Content */}
-      <div style={{ flex: 1, display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '40px 24px' }}>
-        <div style={{
-          backgroundColor: 'rgba(255, 255, 255, 0.9)',
-          backdropFilter: 'blur(20px)',
-          borderRadius: '48px',
-          padding: '60px',
-          width: '100%',
-          maxWidth: '580px',
-          boxShadow: '0 30px 60px rgba(0,0,0,0.05)',
-          textAlign: 'center'
-        }}>
+      <div className="mx-auto flex max-w-[1360px] flex-1 items-center justify-center px-4 py-7 sm:py-10 md:py-14">
+        <div className="w-full max-w-[580px] rounded-[28px] border border-[#e9e9e9] bg-[rgba(255,255,255,0.65)] p-4 shadow-[0_14px_40px_rgba(0,0,0,0.06)] backdrop-blur-[15px] sm:p-6">
           {isSignupComplete ? (
-            <div style={{ paddingTop: '40px', paddingBottom: '40px' }}>
-              <div style={{ width: '80px', height: '80px', backgroundColor: 'rgba(34, 197, 94, 0.1)', borderRadius: '50%', display: 'flex', alignItems: 'center', justifyContent: 'center', margin: '0 auto 32px', color: '#22c55e' }}>
+            <div className="py-8 text-center sm:py-10">
+              <div className="mx-auto mb-7 flex h-20 w-20 items-center justify-center rounded-full bg-[rgba(34,197,94,0.1)] text-[#22c55e]">
                 <CheckCircle2 size={40} strokeWidth={2.5} />
               </div>
-              <h1 style={{ fontSize: '32px', fontWeight: 800, marginBottom: '16px', color: '#1a1a1a' }}>Check your email</h1>
-              <p style={{ color: '#666', fontSize: '16px', lineHeight: '1.6', marginBottom: '32px' }}>
+              <h1 className="mb-3 text-[30px] font-extrabold text-[#1a1a1a] sm:text-[32px]">Check your email</h1>
+              <p className="mx-auto mb-7 max-w-[460px] text-[14px] leading-7 text-[#666] sm:text-base">
                 We've sent a verification link to <strong>{email}</strong>. Please verify your email to activate your account.
               </p>
-              <Link href="/login" style={{
-                backgroundColor: '#FF7A33',
-                color: 'white',
-                padding: '18px 48px',
-                borderRadius: '50px',
-                border: 'none',
-                fontSize: '15px',
-                fontWeight: 800,
-                cursor: 'pointer',
-                textDecoration: 'none',
-                display: 'inline-block',
-                boxShadow: '0 8px 25px rgba(255, 122, 51, 0.3)'
-              }}>
+              <Link href="/login" className="inline-block rounded-full bg-[#FF7A33] px-10 py-3 text-[15px] font-extrabold text-white no-underline shadow-[0_8px_25px_rgba(255,122,51,0.3)]">
                 Go to Login
               </Link>
             </div>
           ) : (
             <>
-              <h1 style={{ fontSize: '32px', fontWeight: 800, marginBottom: '8px', color: '#1a1a1a' }}>Create Account</h1>
-              <p style={{ color: '#666', fontSize: '15px', marginBottom: '40px' }}>Start your journey with PublishType</p>
+              <div className="text-center">
+                <h1 className="text-[34px] font-bold leading-tight sm:text-4xl">Create Account</h1>
+                <p className="mt-1 text-[14px] text-[#666] sm:text-[15px]">Start your journey with PublishType</p>
+              </div>
 
-              <form onSubmit={handleSubmit} style={{ textAlign: 'left', display: 'flex', flexDirection: 'column', gap: '20px' }}>
+              <form onSubmit={handleSubmit} className="mt-5 space-y-4 text-left sm:mt-6">
                 <div>
-                  <label style={labelStyle}>Full Name</label>
+                  <label className="mb-1 block text-[12px] font-extrabold uppercase tracking-[0.05em] text-[#1a1a1a]">Full Name</label>
                   <input
                     type="text"
                     placeholder="John Doe"
                     value={name}
                     onChange={(e) => setName(e.target.value)}
                     required
-                    style={inputStyle(!!errors.name)}
-                    onFocus={(e) => e.target.style.borderColor = '#FF7A33'}
-                    onBlur={(e) => e.target.style.borderColor = errors.name ? '#FF4B2B' : '#eee'}
+                    className={`h-12 w-full rounded-full border bg-[#f9f9f9] px-5 text-[14px] outline-none sm:h-14 ${errors.name ? "border-[#FF4B2B]" : "border-[#eee]"}`}
                   />
-                  {errors.name && <p style={errorTextStyle}>{errors.name}</p>}
+                  {errors.name && <p className="ml-3 mt-1 text-[11px] font-bold text-[#FF4B2B]">{errors.name}</p>}
                 </div>
 
                 <div>
-                  <label style={labelStyle}>Email Address</label>
+                  <label className="mb-1 block text-[12px] font-extrabold uppercase tracking-[0.05em] text-[#1a1a1a]">Email Address</label>
                   <input
                     type="email"
                     placeholder="john@example.com"
                     value={email}
                     onChange={(e) => setEmail(e.target.value)}
                     required
-                    style={inputStyle(!!errors.email)}
-                    onFocus={(e) => e.target.style.borderColor = '#FF7A33'}
-                    onBlur={(e) => e.target.style.borderColor = errors.email ? '#FF4B2B' : '#eee'}
+                    className={`h-12 w-full rounded-full border bg-[#f9f9f9] px-5 text-[14px] outline-none sm:h-14 ${errors.email ? "border-[#FF4B2B]" : "border-[#eee]"}`}
                   />
-                  {errors.email && <p style={errorTextStyle}>{errors.email}</p>}
+                  {errors.email && <p className="ml-3 mt-1 text-[11px] font-bold text-[#FF4B2B]">{errors.email}</p>}
                 </div>
 
-                <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '20px' }}>
+                <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 sm:gap-5">
                   <div>
-                    <label style={labelStyle}>Password</label>
-                    <div style={{ position: 'relative' }}>
+                    <label className="mb-1 block text-[12px] font-extrabold uppercase tracking-[0.05em] text-[#1a1a1a]">Password</label>
+                    <div className="relative">
                       <input
                         type={showPassword ? "text" : "password"}
                         placeholder="********"
                         value={password}
                         onChange={(e) => setPassword(e.target.value)}
                         required
-                        style={inputStyle(!!errors.password)}
-                        onFocus={(e) => e.target.style.borderColor = '#FF7A33'}
-                        onBlur={(e) => e.target.style.borderColor = errors.password ? '#FF4B2B' : '#eee'}
+                        className={`h-12 w-full rounded-full border bg-[#f9f9f9] px-5 pr-12 text-[14px] outline-none sm:h-14 ${errors.password ? "border-[#FF4B2B]" : "border-[#eee]"}`}
                       />
                     </div>
                   </div>
                   <div>
-                    <label style={labelStyle}>Confirm Password</label>
+                    <label className="mb-1 block text-[12px] font-extrabold uppercase tracking-[0.05em] text-[#1a1a1a]">Confirm Password</label>
                     <input
                       type={showPassword ? "text" : "password"}
                       placeholder="********"
                       value={confirmPassword}
                       onChange={(e) => setConfirmPassword(e.target.value)}
                       required
-                      style={inputStyle(!!errors.confirmPassword)}
-                      onFocus={(e) => e.target.style.borderColor = '#FF7A33'}
-                      onBlur={(e) => e.target.style.borderColor = errors.confirmPassword ? '#FF4B2B' : '#eee'}
+                      className={`h-12 w-full rounded-full border bg-[#f9f9f9] px-5 text-[14px] outline-none sm:h-14 ${errors.confirmPassword ? "border-[#FF4B2B]" : "border-[#eee]"}`}
                     />
                   </div>
                 </div>
                 {(errors.password || errors.confirmPassword) && (
-                  <p style={errorTextStyle}>{errors.password || errors.confirmPassword}</p>
+                  <p className="ml-3 -mt-2 text-[11px] font-bold text-[#FF4B2B]">{errors.password || errors.confirmPassword}</p>
                 )}
 
-                <div style={{ display: 'flex', justifyContent: 'flex-end' }}>
+                <div className="flex justify-end">
                   <button
                     type="button"
                     onClick={() => setShowPassword(!showPassword)}
-                    style={{ background: 'none', border: 'none', cursor: 'pointer', color: '#999', fontSize: '12px', fontWeight: 700 }}>
+                    className="border-none bg-transparent text-[12px] font-bold text-[#999]">
                     {showPassword ? "Hide Passwords" : "Show Passwords"}
                   </button>
                 </div>
@@ -261,89 +197,50 @@ export default function SignupPage() {
                 <button
                   type="submit"
                   disabled={isLoading}
-                  style={{
-                    backgroundColor: '#FF7A33',
-                    color: 'white',
-                    padding: '18px',
-                    borderRadius: '50px',
-                    border: 'none',
-                    fontSize: '16px',
-                    fontWeight: 800,
-                    cursor: 'pointer',
-                    boxShadow: '0 8px 25px rgba(255, 122, 51, 0.3)',
-                    display: 'flex',
-                    alignItems: 'center',
-                    justifyContent: 'center',
-                    gap: '10px',
-                    marginTop: '10px'
-                  }}>
+                  className="mt-1 flex h-12 w-full items-center justify-center gap-2 rounded-full bg-[#FF7A33] text-[15px] font-extrabold text-white shadow-[0_8px_25px_rgba(255,122,51,0.3)] sm:h-14 sm:text-base">
                   {isLoading ? <Loader2 className="animate-spin" size={20} /> : 'Create Account'}
                 </button>
               </form>
 
-              <div style={{ position: 'relative', margin: '40px 0', textAlign: 'center' }}>
-                <div style={{ position: 'absolute', left: 0, right: 0, top: '50%', borderTop: '1px solid #eee' }}></div>
-                <span style={{ position: 'relative', backgroundColor: 'white', padding: '0 16px', fontSize: '13px', color: '#999', fontWeight: 700 }}>or signup with</span>
+              <div className="relative my-6 text-center sm:my-8">
+                <div className="absolute left-0 right-0 top-1/2 border-t border-[#eee]" />
+                <span className="relative bg-white px-4 text-[12px] font-bold text-[#999] sm:text-[13px]">or signup with</span>
               </div>
 
-              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '16px' }}>
+              <div className="grid grid-cols-1 gap-2.5 sm:grid-cols-2 sm:gap-4">
                 <button
                   onClick={handleGoogleSignup}
                   disabled={oauthLoading}
-                  style={{
-                    width: '100%',
-                    padding: '14px',
-                    borderRadius: '50px',
-                    border: '1px solid #eee',
-                    backgroundColor: '#fff',
-                    fontSize: '14px',
-                    fontWeight: 700,
-                    display: 'flex',
-                    alignItems: 'center',
-                    justifyContent: 'center',
-                    gap: '12px',
-                    cursor: 'pointer'
-                  }}>
+                  className="flex h-11 w-full items-center justify-center gap-3 rounded-full border border-[#eee] bg-white text-[14px] font-bold sm:h-12">
                   <img src="https://www.gstatic.com/firebasejs/ui/2.0.0/images/auth/google.svg" width="18" height="18" alt="Google" />
                   Google
                 </button>
                 <button
                   onClick={handleGitHubSignup}
                   disabled={oauthLoading}
-                  style={{
-                    width: '100%',
-                    padding: '14px',
-                    borderRadius: '50px',
-                    border: '1px solid #eee',
-                    backgroundColor: '#fff',
-                    fontSize: '14px',
-                    fontWeight: 700,
-                    display: 'flex',
-                    alignItems: 'center',
-                    justifyContent: 'center',
-                    gap: '12px',
-                    cursor: 'pointer'
-                  }}>
+                  className="flex h-11 w-full items-center justify-center gap-3 rounded-full border border-[#eee] bg-white text-[14px] font-bold sm:h-12">
                   <svg width="18" height="18" viewBox="0 0 24 24" fill="currentColor"><path d="M12 0c-6.626 0-12 5.373-12 12 0 4.802 3.116 8.872 7.423 10.3c.6.11.819-.26.819-.578v-2.132c-3.338.724-4.042-1.61-4.042-1.61-.546-1.387-1.333-1.756-1.333-1.756-1.089-.745.083-.729.083-.729 1.205.084 1.839 1.237 1.839 1.237 1.07 1.834 2.807 1.304 3.492.997.107-.775.418-1.305.762-1.604-2.665-.305-5.467-1.334-5.467-5.931 0-1.311.469-2.381 1.236-3.221-.124-.303-.535-1.524.117-3.176 0 0 1.008-.322 3.301 1.23.957-.266 1.983-.399 3.003-.404 1.02.005 2.047.138 3.006.404 2.291-1.552 3.297-1.23 3.297-1.23.653 1.653.242 2.874.118 3.176.77.84 1.235 1.911 1.235 3.221 0 4.609-2.807 5.624-5.479 5.921.43.372.823 1.102.823 2.222v3.293c0 .319.192.694.801.576 4.765-1.589 8.199-6.086 8.199-11.386 0-6.627-5.373-12-12-12z" /></svg>
                   GitHub
                 </button>
               </div>
 
-              <p style={{ marginTop: '40px', fontSize: '13px', color: '#999', lineHeight: '1.6' }}>
-                By creating an account, you agree to our <br />
-                <Link href="/terms" style={{ color: '#666', fontWeight: 800, textDecoration: 'none' }}>Terms of Service</Link> and <Link href="/privacy" style={{ color: '#666', fontWeight: 800, textDecoration: 'none' }}>Privacy Policy</Link>
+              <p className="mt-6 text-center text-[12px] leading-6 text-[#999] sm:mt-8 sm:text-[13px]">
+                By creating an account, you agree to our{" "}
+                <Link href="/terms" className="font-extrabold text-[#666] no-underline">Terms of Service</Link>
+                {" "}and{" "}
+                <Link href="/privacy" className="font-extrabold text-[#666] no-underline">Privacy Policy</Link>
               </p>
             </>
           )}
         </div>
       </div>
 
-      <footer style={{ padding: '24px 40px', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-        <div style={{ display: 'flex', gap: '24px' }}>
-          <Link href="/privacy" style={{ fontSize: '13px', color: '#999', textDecoration: 'none', fontWeight: 600 }}>Privacy Policy</Link>
-          <Link href="/terms" style={{ fontSize: '13px', color: '#999', textDecoration: 'none', fontWeight: 600 }}>Term & Condition</Link>
+      <footer className="mx-auto flex w-full max-w-[1360px] flex-wrap items-center justify-between gap-3 px-4 pb-5 text-[12px] text-[#999] sm:px-6 sm:text-[13px] md:px-10">
+        <div className="flex gap-4 sm:gap-6">
+          <Link href="/privacy" className="font-semibold text-[#999] no-underline">Privacy Policy</Link>
+          <Link href="/terms" className="font-semibold text-[#999] no-underline">Term & Condition</Link>
         </div>
-        <p style={{ margin: 0, fontSize: '13px', color: '#999', fontWeight: 600 }}>
+        <p className="m-0 font-semibold text-[#999]">
           © {new Date().getFullYear()} PublishType. All Rights Reserved.
         </p>
       </footer>
